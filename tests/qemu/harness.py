@@ -72,7 +72,7 @@ class Vm:
 
     def expect(self, pattern, timeout=60):
         """Wait for regex `pattern`; consume output up to the match."""
-        rx = re.compile(pattern, re.M)
+        rx = re.compile(pattern, re.M | re.S) if "(.*?)" in pattern else re.compile(pattern, re.M)
         deadline = time.time() + timeout
         while True:
             m = rx.search(self.buf)
@@ -98,7 +98,10 @@ class Vm:
         self.sendline(f"echo __S{n}$((0))__; {cmd}; echo __E{n}$((0))__ $?")
         m = self.expect(rf"__S{n}0__\r?\n(.*?)__E{n}0__ (\d+)", timeout)
         out, rc = m.group(1), int(m.group(2))
-        return out.replace("\r", ""), rc
+        # Drop console noise from daemons (kernel/udhcpc/ntpd messages).
+        noise = ("udhcpc:", "ntpd:", "deleting routers", "adding dns", "[ ")
+        lines = [l for l in out.replace("\r", "").split("\n") if not l.startswith(noise)]
+        return "\n".join(lines), rc
 
     def monitor(self, command):
         for _ in range(50):

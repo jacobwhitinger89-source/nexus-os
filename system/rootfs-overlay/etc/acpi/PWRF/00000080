@@ -1,0 +1,4 @@
+#!/bin/sh
+# ACPI power button: orderly shutdown.
+logger -t acpid "power button pressed - shutting down"
+exec /sbin/poweroff

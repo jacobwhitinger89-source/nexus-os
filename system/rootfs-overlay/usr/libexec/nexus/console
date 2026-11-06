@@ -14,7 +14,10 @@ if [ "$(nx_mode)" = installed ]; then
 	esac
 fi
 
+# BusyBox init already made us a session leader with $dev as stdio and
+# controlling terminal; just exec (setsid here would fork, and init would
+# respawn a second session on the same terminal).
 if [ -x /usr/sbin/nexus-install ] && ! nx_cmdline nexus.shell >/dev/null; then
-	exec setsid -c /usr/sbin/nexus-install --console <"$dev" >"$dev" 2>&1
+	exec /usr/sbin/nexus-install --console
 fi
-exec setsid -c /bin/sh -l <"$dev" >"$dev" 2>&1
+exec /bin/sh -l

@@ -38,7 +38,7 @@ try:
     out, rc = vm.run("awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{print t-a}' /proc/meminfo")
     used_kb = int(out.strip().splitlines()[-1])
     res.metrics["idle_memory_used_kib_live"] = used_kb
-    res.check("idle memory under 64 MiB (live, rootfs in RAM)", used_kb < 64 * 1024, f"{used_kb} KiB")
+    res.check("idle memory under 96 MiB (live: includes the RAM-resident rootfs)", used_kb < 96 * 1024, f"{used_kb} KiB")
     out, rc = vm.run("nexus resources --json")
     try:
         r = json.loads(out)

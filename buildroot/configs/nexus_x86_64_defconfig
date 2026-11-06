@@ -30,6 +30,7 @@ BR2_ROOTFS_MERGED_USR=y
 BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_NEXUS_PATH)/../system/rootfs-overlay"
 BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_NEXUS_PATH)/board/nexus/post-build.sh"
 BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_NEXUS_PATH)/board/nexus/post-image.sh"
+BR2_ROOTFS_POST_FAKEROOT_SCRIPT="$(BR2_EXTERNAL_NEXUS_PATH)/board/nexus/post-fakeroot.sh"
 
 # Kernel: Linux 6.18 longterm
 BR2_LINUX_KERNEL=y

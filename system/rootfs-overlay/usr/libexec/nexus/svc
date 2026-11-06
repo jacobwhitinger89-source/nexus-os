@@ -7,6 +7,20 @@ name=$1
 mode=$(nx_mode)
 
 park() { exec sleep 2147483647; }
+
+# Daemons never use the console: they log to syslog (nexusd's stderr is
+# piped into syslog below).
+exec </dev/null >/dev/null 2>&1
+
+# Respawn throttle: a daemon that exits within 10 s of its previous start
+# (e.g. ntpd before DNS works) waits 10 s instead of looping in init.
+stamp=/run/nexus/svc-$name.started
+now=$(cut -d. -f1 /proc/uptime)
+if [ -f "$stamp" ] && [ $((now - $(cat "$stamp"))) -lt 10 ]; then
+	sleep 10
+	now=$(cut -d. -f1 /proc/uptime)
+fi
+echo "$now" > "$stamp"
 installed_only() { [ "$mode" = installed ] || park; }
 
 case "$name" in
@@ -26,7 +40,7 @@ ntpd)
 	exec ntpd -n "$@" ;;
 acpid)
 	# Power button => clean shutdown.
-	exec acpid -f -c /etc/acpi -M /etc/acpi.map -a /etc/acpid.conf ;;
+	exec acpid -f -c /etc/acpi ;;
 watchdog)
 	[ -c /dev/watchdog ] || park
 	WATCHDOG=yes
@@ -42,7 +56,10 @@ mdnsd)
 	exec mdnsd -n -s /etc/mdns.d ;;
 nexusd)
 	[ -x /usr/sbin/nexusd ] || park
-	exec /usr/sbin/nexusd ;;
+	# Not exec: the shell waits for the pipeline, so init still sees the
+	# service exit when nexusd dies and respawns it.
+	/usr/sbin/nexusd 2>&1 | logger -t nexusd
+	exit 1 ;;
 *)
 	echo "svc: unknown service $name" >&2
 	park ;;

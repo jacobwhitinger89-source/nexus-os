@@ -25,20 +25,6 @@ ln -sf ../usr/lib/os-release "$TARGET_DIR/etc/os-release"
 # through /etc/inittab and /usr/libexec/nexus/svc.
 rm -f "$TARGET_DIR"/etc/init.d/S[0-9][0-9]*
 
-# Identity files live on the data partition; /etc is read-only squashfs.
-factory="$TARGET_DIR/usr/share/nexus/factory/etc"
-mkdir -p "$factory"
-for f in passwd group shadow hostname hosts; do
-	if [ -f "$TARGET_DIR/etc/$f" ] && [ ! -L "$TARGET_DIR/etc/$f" ]; then
-		mv "$TARGET_DIR/etc/$f" "$factory/$f"
-	fi
-	ln -sfn "/data/etc/$f" "$TARGET_DIR/etc/$f"
-done
-chmod 0600 "$factory/shadow"
-# Groups NEXUS relies on.
-grep -q '^nexus-agent:' "$factory/group" || echo 'nexus-agent:x:990:' >> "$factory/group"
-grep -q '^nexus-svc:' "$factory/group" || echo 'nexus-svc:x:991:' >> "$factory/group"
-
 rm -rf "$TARGET_DIR/etc/dropbear"
 ln -sfn /data/etc/dropbear "$TARGET_DIR/etc/dropbear"
 rm -rf "$TARGET_DIR/var/log"
@@ -48,5 +34,14 @@ ln -sfn /data/home "$TARGET_DIR/home"
 mkdir -p "$TARGET_DIR/data" "$TARGET_DIR/mnt" "$TARGET_DIR/var/lib"
 ln -sfn ../tmp/resolv.conf "$TARGET_DIR/etc/resolv.conf"
 
-# No root password; root login is disabled. Administrators use sudo.
-sed -i 's#^root:[^:]*:#root:*:#' "$factory/shadow"
+# Drop tools a server never runs. grub-install/-editenv/-probe/-bios-setup
+# and the module directories stay: the installer and A/B updates use them.
+for f in grub-mkrescue grub-fstest grub-render-label grub-file grub-syslinux2cfg \
+	grub-mkstandalone grub-mknetdir grub-mkrelpath grub-mklayout grub-script-check \
+	grub-mkpasswd-pbkdf2 grub-glue-efi grub-kbdcomp grub-macbless grub-menulst2cfg \
+	grub-mount grub-ofpathname grub-sparc64-setup grub-reboot grub-set-default \
+	grub-mkconfig grub-mkfont grub-mkimage grub-mknetdir cvtsudoers sudoreplay; do
+	rm -f "$TARGET_DIR/usr/bin/$f" "$TARGET_DIR/usr/sbin/$f"
+done
+rm -rf "$TARGET_DIR/usr/share/locale" "$TARGET_DIR/etc/grub.d" "$TARGET_DIR/usr/share/grub/themes"
+rm -f "$TARGET_DIR"/usr/lib/libgomp.so* "$TARGET_DIR/usr/sbin/smartd"
