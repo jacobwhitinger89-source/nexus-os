@@ -129,13 +129,13 @@ try:
     res.check("invalid hostname rejected", True)
     vm.expect(r"Computer hostname", 10); vm.sendline("pixel")
     vm.expect(r"Administrator username", 10); vm.sendline("admin")
-    vm.expect(r"Administrator password", 10); vm.sendline(PASSWORD)
-    vm.expect(r"Confirm password", 10); vm.sendline("mismatch-123")
+    vm.expect(r"Administrator password:\r?\n> ", 10); vm.sendline(PASSWORD)
+    vm.expect(r"Confirm password:\r?\n> ", 10); vm.sendline("mismatch-123")
     vm.expect(r"do not match", 10)
     res.check("password mismatch detected", True)
-    vm.expect(r"Administrator password", 10); vm.sendline(PASSWORD)
-    vm.expect(r"Confirm password", 10); vm.sendline(PASSWORD)
-    m = vm.expect(r"\[1\] (\w+)", 60)
+    vm.expect(r"Administrator password:\r?\n> ", 10); vm.sendline(PASSWORD)
+    vm.expect(r"Confirm password:\r?\n> ", 10); vm.sendline(PASSWORD)
+    m = vm.expect(r"\[1\] (\w+)\s", 60)
     target = m.group(1)
     res.check("ISO media excluded from disk list", target == "vda", target)
     vm.expect(r"Select the disk", 10); vm.sendline("1")
@@ -167,7 +167,7 @@ try:
 
     scanned = wait_ssh()
     with open(known_hosts, "w") as f:
-        f.write(scanned.replace("127.0.0.1", f"[127.0.0.1]:{SSH_PORT}"))
+        f.write(scanned)
     p = subprocess.run(["ssh-keygen", "-lf", known_hosts], capture_output=True, text=True)
     res.check("SSH host key matches installer fingerprint", fingerprint in p.stdout, f"{fingerprint} vs {p.stdout}")
 
@@ -191,7 +191,8 @@ try:
     res.check("project created", rc == 0, out + err)
     dist = os.path.join(tmp, "dist")
     os.makedirs(dist)
-    subprocess.run(["cargo", "build", "-q", "--release", "--target", "x86_64-unknown-linux-musl", "-p", "hello-http"],
+    cargo = shutil.which("cargo") or os.path.expanduser("~/.cargo/bin/cargo")
+    subprocess.run([cargo, "build", "-q", "--release", "--target", "x86_64-unknown-linux-musl", "-p", "hello-http"],
                    cwd=TOP, check=True)
     shutil.copy(os.path.join(TOP, "target/x86_64-unknown-linux-musl/release/hello-http"), dist)
     shutil.copy(os.path.join(TOP, "examples/hello-http/nexus.toml"), dist)
@@ -217,6 +218,8 @@ try:
     res.check("service has seccomp filter", "Seccomp:\t2" in out)
     res.check("service has no_new_privs", "NoNewPrivs:\t1" in out)
     res.check("service in its cgroup", "0::/nexus/hello/web" in out)
+    rc, out, _ = ssh("ls -l /dev/null /dev/zero /dev/urandom")
+    res.check("device permissions correct (/dev/null 0666)", out.count("crw-rw-rw-") >= 2, out)
 
     http("/crash")
     time.sleep(5)
@@ -273,8 +276,10 @@ try:
 
     # ------------------------------------------------------------ A/B update
     if os.path.exists(bundle):
-        subprocess.run(["scp", "-O", "-P", str(SSH_PORT), "-i", admin_key, "-o", f"UserKnownHostsFile={known_hosts}",
-                        "-o", "LogLevel=ERROR", bundle, "admin@127.0.0.1:/data/home/admin/update.tar"], check=False)
+        p = subprocess.run(["scp", "-O", "-P", str(SSH_PORT), "-i", admin_key, "-o", f"UserKnownHostsFile={known_hosts}",
+                            "-o", "LogLevel=ERROR", bundle, "admin@127.0.0.1:/data/home/admin/update.tar"],
+                           capture_output=True, text=True)
+        res.check("scp upload works", p.returncode == 0, p.stderr)
         rc, out, err = ssh(f"echo '{PASSWORD}' | sudo -S -p '' nexus system update /data/home/admin/update.tar --json",
                            timeout=300)
         res.check("update written to slot b", rc == 0 and '"slot": "b"' in out, out + err)

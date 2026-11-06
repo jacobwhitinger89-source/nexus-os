@@ -27,10 +27,6 @@ echo "$MODE" > /run/nexus/mode
 SLOT=$(nx_cmdline nexus.slot)
 [ -n "$SLOT" ] && echo "$SLOT" > /run/nexus/slot
 
-# Device nodes and hotplug (module autoloading, firmware).
-echo /sbin/mdev > /proc/sys/kernel/hotplug
-mdev -s
-
 nx_step "Mounting data storage"
 if [ "$MODE" = installed ]; then
 	DATADEV=$(blkid -L NEXUS_DATA 2>/dev/null)
@@ -62,6 +58,12 @@ fi
 nx_ok
 
 nx_prepare_data
+
+# Device permissions and module coldplug. Runs after /data/etc is seeded
+# because mdev.conf rules name users/groups from /etc/passwd and
+# /etc/group. Hotplug afterwards is handled by "mdev -d" (inittab).
+mdev -s
+cat /sys/bus/*/devices/*/modalias 2>/dev/null | sort -u | xargs -r modprobe -abq 2>/dev/null
 
 hostname -F /etc/hostname 2>/dev/null || hostname nexus
 ip link set lo up

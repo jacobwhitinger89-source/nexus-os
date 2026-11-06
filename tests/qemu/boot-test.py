@@ -46,6 +46,8 @@ try:
         res.check("GPU reported honestly", isinstance(r["gpus"], list))
     except Exception as e:  # noqa: BLE001
         res.check("nexus resources --json works", False, f"{e}: {out[:300]}")
+    out, rc = vm.run("ls -l /dev/null")
+    res.check("/dev/null is world-writable (mdev rules applied)", out.startswith("crw-rw-rw-"), out)
     out, rc = vm.run("pidof nexusd")
     res.check("supervisor running", rc == 0, out)
     out, rc = vm.run("cat /proc/1/cmdline | tr '\\0' ' '; ls /sys/fs/cgroup/nexus")

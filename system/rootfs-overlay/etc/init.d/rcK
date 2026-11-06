@@ -27,6 +27,11 @@ stop udhcpc 3
 stop ntpd 3
 stop syslogd 3
 
+# Everything else (acpid, getty/shells, parked services) still holds files
+# on /data open; end them so /data can be remounted read-only.
+nx_step "Stopping remaining processes"
+killall5 -TERM; sleep 1; killall5 -KILL; nx_ok
+
 nx_step "Disabling swap"
 swapoff -a 2>/dev/null; nx_ok
 nx_step "Flushing disks"

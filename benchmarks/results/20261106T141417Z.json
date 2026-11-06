@@ -1,0 +1,89 @@
+{
+  "note": "live mode: the whole root filesystem is in RAM (initramfs), so used memory includes it; installed systems run from squashfs on disk",
+  "image_sizes_bytes": {
+    "bzImage": 12063744,
+    "rootfs.squashfs": 12324864,
+    "nexus-0.1.0-dev-x86_64-update.tar": 24401920,
+    "rootfs.cpio.zst": 8817085,
+    "nexus-0.1.0-dev-x86_64.iso": 50051072
+  },
+  "boot_to_shell_s_median": 1.49,
+  "idle_mem_used_kib_median": 72628,
+  "runs": [
+    {
+      "boot_to_shell_s": 1.39,
+      "mem_total_kib": 223964,
+      "mem_used_kib": 73288,
+      "rss_kib": {
+        "init": 1084,
+        "mdev": 1100,
+        "syslogd": 1032,
+        "klogd": 1056,
+        "udhcpc": 1104,
+        "ntpd": 1076,
+        "acpid": 1028,
+        "watchdog": 1048,
+        "sleep": 2076,
+        "svc": 1336,
+        "sh": 2664,
+        "nexusd": 1040,
+        "logger": 1072
+      },
+      "loadavg": [
+        "0.00",
+        "0.00",
+        "0.00"
+      ]
+    },
+    {
+      "boot_to_shell_s": 1.56,
+      "mem_total_kib": 223964,
+      "mem_used_kib": 72180,
+      "rss_kib": {
+        "init": 1016,
+        "mdev": 1188,
+        "syslogd": 1112,
+        "klogd": 1032,
+        "udhcpc": 1120,
+        "ntpd": 1072,
+        "acpid": 1072,
+        "watchdog": 1136,
+        "sleep": 2168,
+        "svc": 1296,
+        "sh": 2500,
+        "nexusd": 1132,
+        "logger": 1076
+      },
+      "loadavg": [
+        "0.00",
+        "0.00",
+        "0.00"
+      ]
+    },
+    {
+      "boot_to_shell_s": 1.49,
+      "mem_total_kib": 223964,
+      "mem_used_kib": 72628,
+      "rss_kib": {
+        "init": 1040,
+        "mdev": 1208,
+        "syslogd": 1016,
+        "klogd": 1024,
+        "udhcpc": 1100,
+        "ntpd": 1100,
+        "acpid": 1052,
+        "watchdog": 1100,
+        "sleep": 1996,
+        "svc": 1192,
+        "sh": 2392,
+        "nexusd": 1132,
+        "logger": 1032
+      },
+      "loadavg": [
+        "0.00",
+        "0.00",
+        "0.00"
+      ]
+    }
+  ]
+}

@@ -51,7 +51,7 @@ class Vm:
         self.monitor_path = os.path.join(WORK, f"{name}.monitor")
         if os.path.exists(self.monitor_path):
             os.unlink(self.monitor_path)
-        self.log = open(os.path.join(WORK, f"{name}.log"), "ab")
+        self.log = open(os.path.join(WORK, f"{name}.log"), "wb")
         self.buf = ""
         self.proc = subprocess.Popen(
             args + ["-monitor", f"unix:{self.monitor_path},server,nowait"],

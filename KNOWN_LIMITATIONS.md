@@ -11,6 +11,16 @@ NEXUS OS is pre-alpha. This list is kept honest and current.
 * Automatic power-on after AC loss is a firmware setting NEXUS cannot change.
 * x86-64 only.
 
+* mDNS (`<host>.local`) is configured but not yet verified by an automated
+  test (QEMU user networking does not carry multicast). Static IP
+  configuration is implemented but untested.
+* The installer/live system keeps its root filesystem in RAM (~71 MiB used);
+  installing on machines with 256 MiB works in principle but is untested.
+* Automatic fallback after a *failing* update is implemented (GRUB try
+  counter) but only the successful update path is tested.
+* No `nexus connect` client yet; key enrollment uses standard `ssh-copy-id`
+  / `nexus ssh add-key`.
+
 ## Security
 * ISO and update bundles are checksummed (SHA-256) but **not signed**.
 * No network isolation between projects (shared network namespace).

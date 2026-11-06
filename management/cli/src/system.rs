@@ -101,7 +101,10 @@ impl Esp {
             ));
         }
         fs::create_dir_all(ESP_MNT)?;
-        let _ = Command::new("umount").arg(ESP_MNT).status();
+        let _ = Command::new("umount")
+            .arg(ESP_MNT)
+            .stderr(std::process::Stdio::null())
+            .status();
         sh(
             "mount",
             &["-t", "vfat", "-o", "rw,nosuid,nodev,noexec", &dev, ESP_MNT],

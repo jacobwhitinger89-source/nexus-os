@@ -4,6 +4,7 @@
 # (live installer vs installed server) whether a daemon actually runs.
 ::sysinit:/etc/init.d/rcS
 
+::respawn:/usr/libexec/nexus/svc mdev
 ::respawn:/usr/libexec/nexus/svc syslogd
 ::respawn:/usr/libexec/nexus/svc klogd
 ::respawn:/usr/libexec/nexus/svc network

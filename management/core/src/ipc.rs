@@ -224,9 +224,16 @@ pub fn call(
     line.push('\n');
     stream.write_all(line.as_bytes())?;
     if let Some(src) = upload {
-        io::copy(src, &mut stream)?;
+        // The daemon may refuse (e.g. FORBIDDEN) and close before reading
+        // the upload; the reply still arrives, so a broken pipe is not fatal.
+        if let Err(e) = io::copy(src, &mut stream)
+            && e.kind() != io::ErrorKind::BrokenPipe
+            && e.kind() != io::ErrorKind::ConnectionReset
+        {
+            return Err(e);
+        }
     }
-    stream.shutdown(std::net::Shutdown::Write)?;
+    let _ = stream.shutdown(std::net::Shutdown::Write);
     let reader = BufReader::new(stream);
     for line in reader.lines() {
         let line = line?;

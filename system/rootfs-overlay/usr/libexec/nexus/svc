@@ -24,6 +24,9 @@ echo "$now" > "$stamp"
 installed_only() { [ "$mode" = installed ] || park; }
 
 case "$name" in
+mdev)
+	# Hotplug daemon on the kernel uevent netlink socket.
+	exec mdev -df ;;
 syslogd)
 	# 4 rotated files x 2 MiB keeps logs bounded on small disks.
 	exec syslogd -n -O /var/log/messages -s 2048 -b 4 ;;

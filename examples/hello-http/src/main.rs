@@ -61,7 +61,10 @@ fn main() {
         let path = first.split_whitespace().nth(1).unwrap_or("/");
         let (status, body) = match path {
             "/health" => ("200 OK", "ok\n".to_string()),
-            "/" => ("200 OK", format!("Hello from NEXUS OS (release {release})\n")),
+            "/" => (
+                "200 OK",
+                format!("Hello from NEXUS OS (release {release})\n"),
+            ),
             "/crash" => {
                 eprintln!("hello-http: crash requested via /crash");
                 std::process::exit(3);

@@ -68,8 +68,8 @@ pub fn read_key(ms: i32) -> Option<u8> {
 
 /// Read a line without echo (passwords). Restores the terminal afterwards.
 pub fn read_hidden(prompt: &str) -> io::Result<String> {
-    print!("{prompt}");
-    io::stdout().flush()?;
+    // Echo goes off *before* the prompt is shown so type-ahead is never
+    // echoed either.
     let mut t: libc::termios = unsafe { std::mem::zeroed() };
     let tty = unsafe { libc::tcgetattr(0, &mut t) } == 0;
     let saved = t;
@@ -78,6 +78,8 @@ pub fn read_hidden(prompt: &str) -> io::Result<String> {
         t.c_lflag |= libc::ECHONL;
         unsafe { libc::tcsetattr(0, libc::TCSANOW, &t) };
     }
+    print!("{prompt}");
+    let _ = io::stdout().flush();
     let mut s = String::new();
     let r = io::stdin().read_line(&mut s);
     if tty {
