@@ -48,7 +48,7 @@ def keygen(name):
     return path, open(path + ".pub").read().strip()
 
 
-admin_key, admin_pub = keygen("admin_key")
+admin_key, _ = keygen("admin_key")
 agent_key, agent_pub = keygen("agent_key")
 known_hosts = os.path.join(tmp, "known_hosts")
 askpass = os.path.join(tmp, "askpass.sh")
@@ -148,7 +148,9 @@ try:
     vm.expect(r"NEXUS OS INSTALLED", 600)
     res.metrics["install_seconds"] = round(time.time() - t_install, 1)
     res.check("installation completes", True)
-    m = vm.expect(r"ed25519\s+(SHA256:\S+)", 30)
+    # Full 43-character fingerprint: expect() matches on partial output, so
+    # an open-ended \S+ could capture a prefix.
+    m = vm.expect(r"ed25519\s+(SHA256:[A-Za-z0-9+/]{43})", 30)
     fingerprint = m.group(1)
     res.check("password never echoed", PASSWORD not in open(os.path.join(WORK, "e2e-install.log"), errors="replace").read())
     vm.expect(r"press Enter to reboot", 30)
@@ -169,7 +171,7 @@ try:
     with open(known_hosts, "w") as f:
         f.write(scanned)
     p = subprocess.run(["ssh-keygen", "-lf", known_hosts], capture_output=True, text=True)
-    res.check("SSH host key matches installer fingerprint", fingerprint in p.stdout, f"{fingerprint} vs {p.stdout}")
+    res.check("SSH host key matches installer fingerprint", fingerprint in p.stdout.split(), f"{fingerprint} vs {p.stdout}")
 
     rc, st = ssh_json("nexus status --json", password=True)
     res.check("password bootstrap login works", rc == 0 and st.get("hostname") == "pixel", str(st)[:300])
@@ -178,8 +180,32 @@ try:
 
     rc, out, err = ssh(f"nexus ssh finalize --json", password=True)
     res.check("finalize refused before any key login", rc != 0 and "NOT_VERIFIED" in out, out + err)
-    rc, out, err = ssh(f"nexus ssh add-key '{admin_pub}'", password=True)
-    res.check("public key enrolled", rc == 0, out + err)
+    # Client onboarding with `nexus connect` (host side): verify the
+    # installer's fingerprint, enroll the admin key with the password, write
+    # an SSH alias. Kept in its own ssh dir; the user's ~/.ssh is untouched.
+    subprocess.run(["cargo", "build", "--locked", "-q", "-p", "nexus-connect"], cwd=TOP, check=True)
+    cdir = os.path.join(tmp, "connect-ssh")
+    os.makedirs(cdir, mode=0o700)
+    connect = [os.path.join(TOP, "target", "debug", "nexus-connect"), "127.0.0.1", "--port", str(SSH_PORT),
+               "--user", "admin", "--alias", "pixel", "--ssh-dir", cdir, "--key", admin_key + ".pub", "--json"]
+    cenv = dict(os.environ, SSH_ASKPASS=askpass, SSH_ASKPASS_REQUIRE="force", DISPLAY=":0")
+    cenv.pop("SSH_AUTH_SOCK", None)  # no keys from the developer's agent
+    p = subprocess.run(connect + ["--fingerprint", "SHA256:" + "A" * 43], capture_output=True, text=True,
+                       env=cenv, stdin=subprocess.DEVNULL, timeout=60)
+    res.check("nexus connect refuses a wrong fingerprint", p.returncode == 1 and "HOST_KEY_MISMATCH" in p.stdout
+              and not os.path.exists(os.path.join(cdir, "known_hosts")), p.stdout + p.stderr)
+    p = subprocess.run(connect + ["--fingerprint", fingerprint], capture_output=True, text=True,
+                       env=cenv, stdin=subprocess.DEVNULL, timeout=120)
+    try:
+        cres = json.loads(p.stdout)
+    except json.JSONDecodeError:
+        cres = {}
+    res.check("nexus connect enrolls the key and verifies key login", p.returncode == 0
+              and cres.get("key", {}).get("key_login_verified") is True, p.stdout + p.stderr)
+    p = subprocess.run(["ssh", "-F", os.path.join(cdir, "config"), "-o", "ControlPersist=no",
+                        "-o", "PasswordAuthentication=no", "pixel", "nexus whoami --json"],
+                       capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=60, env=cenv)
+    res.check("SSH alias written by nexus connect works", p.returncode == 0, p.stdout + p.stderr)
     rc, out, err = ssh("nexus ssh finalize --json")
     res.check("key login + finalize", rc == 0 and '"password_auth": false' in out, out + err)
     time.sleep(2)

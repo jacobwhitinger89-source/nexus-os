@@ -9,7 +9,7 @@ _Last updated: 2026-11-06 — version 0.1.0-dev (pre-alpha)_
 | Rust unit tests | `make test-rust` | 39 passed (fmt + clippy `-D warnings` clean) |
 | Host supervisor integration | `make test-host` | 23 / 23 |
 | QEMU boot (Phase 1 acceptance) | `make test-boot` | 12 / 12 |
-| QEMU install + end-to-end | `make test-install` | 51 / 51 |
+| QEMU install + end-to-end | `make test-install` | 53 / 53 |
 | QEMU two-machine networking | `make test-net` | 17 / 17 |
 
 ## Measurements (`make bench`, QEMU/KVM — not physical hardware)
@@ -37,7 +37,7 @@ environment + a running app fits in ~38 MiB (target 64–128 MiB).
 | 0 Architecture & environment | done | ARCHITECTURE.md, Makefile, setup script |
 | 1 First bootable image | **done** | boot-test (banner, hardware/memory info, console, clean shutdown) |
 | 2 Installation | **done** | install-test: wizard, validation, hidden password, disk confirmation, GPT A/B layout, GRUB UEFI+BIOS |
-| 3 Networking & SSH | done | DHCP, Dropbear, host-key fingerprint, key enrollment, finalize, firewall rate limit, static IPv4 + persistence, mDNS discovery/resolution and hostname change (two-VM test); `nexus connect` client (unit tests only) |
+| 3 Networking & SSH | done | DHCP, Dropbear, host-key fingerprint, key enrollment, finalize, firewall rate limit, static IPv4 + persistence, mDNS discovery/resolution and hostname change (two-VM test); `nexus connect` client (fingerprint check, key enrollment, alias — QEMU test) |
 | 4 Management interface | done | `nexus status/resources/projects`, dashboard (manual check only, no automated TUI test) |
 | 5 Project management | done | supervision, restart policies, dependencies, health checks, cgroup limits, logs |
 | 6 AI integration | done | `--json` everywhere, diagnostics, agent accounts with forced command, grants, audit |
@@ -46,10 +46,9 @@ environment + a running app fits in ~38 MiB (target 64–128 MiB).
 | 9 Public release | not started | needs physical hardware testing, signed artifacts, CI run on GitHub, repository publication |
 
 ## Currently in progress / next objectives
-1. QEMU test for `nexus connect` against a real server (implemented in
-   `management/connect`, unit- and smoke-tested with fake `ssh` only).
-2. Stronger power-loss test: reset immediately after each kind of state change.
-3. Watchdog hang-recovery test.
+1. Stronger power-loss test: reset immediately after each kind of state change.
+2. Watchdog hang-recovery test.
+3. Investigate live-image RAM growth (70.9 → 77.5 MiB).
 4. Signed update bundles / ISO (minisign or similar), then Secure Boot study.
 5. Physical hardware matrix (low-end laptops, mini PCs).
 6. Optional runtime packages (Node/Python) outside the base image.

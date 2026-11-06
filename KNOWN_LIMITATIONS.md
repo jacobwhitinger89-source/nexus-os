@@ -18,8 +18,8 @@ NEXUS OS is pre-alpha. This list is kept honest and current.
 * Automatic fallback after a failing update is tested only for an update
   that panics at boot; an update that boots but never confirms itself
   relies on the same try counter but has no dedicated test.
-* `nexus connect` is unit-tested only (fake `ssh`), not yet run against a
-  real server in the automated tests. It pins only the ed25519 host key,
+* `nexus connect` is tested against a QEMU server from a Linux host; macOS
+  is untested. It pins only the ed25519 host key,
   does not detect *hashed* known_hosts entries (it may add a duplicate,
   which OpenSSH tolerates), leaves stale entries for a reinstalled host in
   place (reported; `ssh-keygen -R`), and appends its `Host` block at the end

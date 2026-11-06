@@ -52,3 +52,9 @@ First working system.
   the SSH session that requested it: sessions re-parented to init during
   the /proc scan were signalled too. Dropbear now writes
   `/run/nexus/dropbear.pid` and only that process is restarted.
+* `nexus connect --ssh-dir` writes `UserKnownHostsFile` and `ControlPath`
+  for that directory into the alias (previously pointed at ~/.ssh).
+* install-test: `nexus connect` against the installed server (wrong
+  fingerprint refused, key enrolled with the password, alias login); the
+  installer fingerprint is now captured and compared in full (a streaming
+  match could capture just a prefix and pass trivially).

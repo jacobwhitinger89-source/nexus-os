@@ -202,12 +202,15 @@ fn marker_end(alias: &str) -> String {
 /// The `~/.ssh/config` block written for one server (markers included,
 /// trailing newline). ControlMaster keeps one authenticated connection open
 /// so agents running many short `ssh host nexus …` commands stay fast.
+/// `ssh_dir` is set for a non-default directory (`--ssh-dir`): known_hosts
+/// and the control socket then live there instead of in ~/.ssh.
 pub fn config_block(
     alias: &str,
     host: &str,
     user: &str,
     port: u16,
     identity: Option<&str>,
+    ssh_dir: Option<&str>,
 ) -> String {
     let mut b = format!(
         "{}\n# Managed by nexus connect; re-run it to update, delete the block to remove.\nHost {alias}\n    HostName {host}\n    User {user}\n",
@@ -219,9 +222,13 @@ pub fn config_block(
     if let Some(id) = identity {
         b.push_str(&format!("    IdentityFile {id}\n"));
     }
-    b.push_str(
-        "    StrictHostKeyChecking yes\n    ControlMaster auto\n    ControlPath ~/.ssh/nexus-%C\n    ControlPersist 10m\n    ServerAliveInterval 30\n",
-    );
+    let dir = ssh_dir.unwrap_or("~/.ssh");
+    if ssh_dir.is_some() {
+        b.push_str(&format!("    UserKnownHostsFile {dir}/known_hosts\n"));
+    }
+    b.push_str(&format!(
+        "    StrictHostKeyChecking yes\n    ControlMaster auto\n    ControlPath {dir}/nexus-%C\n    ControlPersist 10m\n    ServerAliveInterval 30\n"
+    ));
     b.push_str(&marker_end(alias));
     b.push('\n');
     b
@@ -725,7 +732,15 @@ pub fn run(o: &Options) -> Result<Value, Fail> {
         conflict = config_alias_conflict(&existing, &o.alias);
         // Only the private key's *path* goes into the config.
         let identity = priv_path.as_deref().map(config_path_display);
-        let block = config_block(&o.alias, &o.host, &o.user, o.port, identity.as_deref());
+        let custom_dir = o.ssh_dir.as_deref().map(config_path_display);
+        let block = config_block(
+            &o.alias,
+            &o.host,
+            &o.user,
+            o.port,
+            identity.as_deref(),
+            custom_dir.as_deref(),
+        );
         let updated = config_update(&existing, &o.alias, &block)
             .map_err(|e| Fail::Failed("CONFIG_DAMAGED", e))?;
         if updated != existing {
@@ -938,8 +953,20 @@ mod tests {
             "admin",
             22,
             Some("~/.ssh/id_ed25519"),
+            None,
         );
         assert!(b1.contains("ControlMaster auto") && b1.contains("ControlPersist"));
+        assert!(b1.contains("ControlPath ~/.ssh/nexus-%C") && !b1.contains("UserKnownHostsFile"));
+        let custom = config_block(
+            "pixel",
+            "pixel.local",
+            "admin",
+            22,
+            None,
+            Some("/tmp/t/ssh"),
+        );
+        assert!(custom.contains("UserKnownHostsFile /tmp/t/ssh/known_hosts"));
+        assert!(custom.contains("ControlPath /tmp/t/ssh/nexus-%C"));
         assert!(!b1.contains("Port "));
         let once = config_update(user, "pixel", &b1).unwrap();
         assert!(once.starts_with(user));
@@ -949,12 +976,12 @@ mod tests {
         // Replace in place, user content around it untouched.
         let tail = "\nHost later\n    User me\n";
         let with_tail = format!("{once}{tail}");
-        let b2 = config_block("pixel", "10.0.0.5", "jacob", 2222, None);
+        let b2 = config_block("pixel", "10.0.0.5", "jacob", 2222, None, None);
         let replaced = config_update(&with_tail, "pixel", &b2).unwrap();
         assert_eq!(replaced, format!("{user}\n{b2}{tail}"));
         assert!(replaced.contains("Port 2222") && !replaced.contains("pixel.local"));
         // Another alias gets its own block.
-        let b3 = config_block("lab", "lab.local", "admin", 22, None);
+        let b3 = config_block("lab", "lab.local", "admin", 22, None, None);
         let both = config_update(&replaced, "lab", &b3).unwrap();
         assert!(both.contains(&b2) && both.ends_with(&b3));
         // Empty file / no trailing newline.
@@ -970,7 +997,7 @@ mod tests {
 
     #[test]
     fn alias_conflicts() {
-        let b = config_block("pixel", "pixel.local", "admin", 22, None);
+        let b = config_block("pixel", "pixel.local", "admin", 22, None, None);
         assert!(!config_alias_conflict(&b, "pixel"));
         assert!(config_alias_conflict("Host  web pixel\n", "pixel"));
         assert!(config_alias_conflict("host=pixel\n", "pixel"));
