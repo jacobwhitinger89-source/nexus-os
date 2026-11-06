@@ -2,6 +2,7 @@
 //! filesystem layout, the versioned JSON schema, project manifests,
 //! hardware resource metrics and the nexusd IPC protocol.
 
+pub mod fsutil;
 pub mod ipc;
 pub mod manifest;
 pub mod paths;

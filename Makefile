@@ -31,7 +31,7 @@ export PATH := $(TOP)/.tools/bin:$(if $(shell command -v wget),,$(TOP)/scripts/h
 
 BR := $(MAKE) -C $(BR_SRC) O=$(BR_OUT) BR2_EXTERNAL=$(TOP)/buildroot
 
-.PHONY: setup build rust buildroot-config os iso run run-iso test test-rust test-host test-boot test-install \
+.PHONY: setup build rust buildroot-config os iso run run-iso test test-rust test-host test-boot test-install test-net \
 	bench fmt lint clean distclean menuconfig linux-menuconfig savedefconfig
 
 setup:
@@ -79,7 +79,7 @@ run:
 run-iso:
 	scripts/qemu-run.sh iso
 
-test: test-rust test-host test-boot test-install
+test: test-rust test-host test-boot test-install test-net
 
 test-rust:
 	cargo fmt --all -- --check
@@ -95,6 +95,9 @@ test-boot:
 
 test-install:
 	tests/qemu/install-test.sh $(ISO)
+
+test-net:
+	tests/qemu/net-test.sh $(ISO)
 
 bench:
 	benchmarks/run.sh $(IMAGES)

@@ -66,6 +66,7 @@ fn kill_pidfile(path: &str) {
 }
 
 fn kill_by_name(name: &str) {
+    let _ = fs::write(format!("/run/nexus/svc-{name}.restart"), "");
     if let Ok(rd) = fs::read_dir("/proc") {
         for e in rd.flatten() {
             let Ok(pid) = e.file_name().to_string_lossy().parse::<i32>() else {
@@ -84,10 +85,12 @@ fn kill_by_name(name: &str) {
 }
 
 fn atomic_write(path: &Path, content: &str) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
     let real = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-    let tmp = real.with_extension("nexus-tmp");
-    fs::write(&tmp, content)?;
-    fs::rename(tmp, real)
+    let mode = fs::metadata(&real)
+        .map(|m| m.permissions().mode() & 0o7777)
+        .unwrap_or(0o644);
+    nexus_core::fsutil::write_durable(&real, content.as_bytes(), mode)
 }
 
 struct Esp;
@@ -235,6 +238,7 @@ pub fn run(a: &Args, json: bool) -> R {
                 Path::new("/data/etc/nexus/network.conf"),
                 &format!("# written by nexus system network\n{conf}"),
             )?;
+            let _ = fs::write("/run/nexus/svc-network.restart", "");
             kill_pidfile("/run/nexus/netd.pid");
             done(
                 json!({ "network": mode }),
@@ -441,7 +445,10 @@ fn update(a: &Args, json: bool) -> R {
     let kdir = esp.path(&format!("nexus/{target}"));
     fs::create_dir_all(&kdir)?;
     fs::copy(staging.join("bzImage"), kdir.join("bzImage.new"))?;
+    // The kernel must be on disk before grubenv schedules the trial boot.
+    fs::File::open(kdir.join("bzImage.new"))?.sync_all()?;
     fs::rename(kdir.join("bzImage.new"), kdir.join("bzImage"))?;
+    nexus_core::fsutil::sync_parent(&kdir.join("bzImage"))?;
     env_set(&esp, &[("nexus_try", target), ("nexus_tries", "3")])?;
     drop(esp);
     let _ = fs::remove_dir_all(&staging);

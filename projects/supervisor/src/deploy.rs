@@ -46,10 +46,13 @@ fn write_record(r: &DeploymentRecord) {
     if let Some(d) = p.parent() {
         let _ = fs::create_dir_all(d);
     }
-    let tmp = p.with_extension("tmp");
-    if fs::write(&tmp, serde_json::to_string_pretty(r).unwrap_or_default()).is_ok() {
-        let _ = fs::rename(tmp, p);
-    }
+    let _ = nexus_core::fsutil::write_durable(
+        &p,
+        serde_json::to_string_pretty(r)
+            .unwrap_or_default()
+            .as_bytes(),
+        0o644,
+    );
 }
 
 pub fn history(project: &str) -> Vec<DeploymentRecord> {
@@ -86,6 +89,9 @@ fn send(out: &mut dyn Write, stream: &str, line: impl Into<String>) {
 /// Point `current` at `releases/<id>` with one atomic rename.
 pub fn switch_current(project: &str, id: &str) -> io::Result<()> {
     let pp = ProjectPaths::new(project);
+    // The release's files must be on disk before `current` points at them,
+    // or a power cut could leave the project running truncated files.
+    nexus_core::fsutil::syncfs(&pp.dir)?;
     let tmp = pp.dir.join("current.tmp");
     let _ = fs::remove_file(&tmp);
     std::os::unix::fs::symlink(Path::new("releases").join(id), &tmp)?;

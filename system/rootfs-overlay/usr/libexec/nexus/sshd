@@ -13,7 +13,7 @@ for t in ed25519 ecdsa; do
 	[ -s "$k" ] || dropbearkey -t $t -f "$k" >/dev/null 2>&1
 done
 
-set -- -F -p "$PORT" -w -k -T 5 \
+set -- -F -P /run/nexus/dropbear.pid -p "$PORT" -w -k -T 5 \
 	-r $keydir/dropbear_ed25519_host_key -r $keydir/dropbear_ecdsa_host_key
 # -w: no root logins, -k: no remote port forwarding, -T: max auth tries.
 [ "$PASSWORD_AUTH" = yes ] || set -- "$@" -s

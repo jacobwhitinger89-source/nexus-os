@@ -50,6 +50,7 @@ if [ "$MODE" = static ]; then
 	: > /tmp/resolv.conf
 	for d in $DNS; do echo "nameserver $d" >> /tmp/resolv.conf; done
 	logger -t netd "static $ADDRESS on $IF"
+	nx_mdns_refresh
 	exec sleep 2147483647
 fi
 

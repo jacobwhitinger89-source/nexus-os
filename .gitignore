@@ -4,3 +4,5 @@
 /out
 /.tools
 *.qcow2
+.claude/worktrees/
+__pycache__/

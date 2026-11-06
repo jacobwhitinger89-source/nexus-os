@@ -737,6 +737,10 @@ fn cmd_ssh(a: &Args, json: bool) -> R {
                     .append(true)
                     .open(&path)?;
                 writeln!(f, "{}", key.trim())?;
+                // Survive a power cut: losing the key locks the admin out
+                // once password logins are disabled.
+                f.sync_all()?;
+                nexus_core::fsutil::sync_parent(&path)?;
             }
             std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
             if json {

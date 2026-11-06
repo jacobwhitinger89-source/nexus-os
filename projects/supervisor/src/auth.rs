@@ -80,18 +80,7 @@ pub fn save_grants(g: &Grants) -> std::io::Result<()> {
     if let Some(d) = path.parent() {
         fs::create_dir_all(d)?;
     }
-    let tmp = path.with_extension("tmp");
-    {
-        let mut f = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .mode(0o600)
-            .open(&tmp)?;
-        f.write_all(serde_json::to_string_pretty(g)?.as_bytes())?;
-        f.sync_all()?;
-    }
-    fs::rename(tmp, path)
+    nexus_core::fsutil::write_durable(&path, serde_json::to_string_pretty(g)?.as_bytes(), 0o600)
 }
 
 /// Normalise a permission list; "all" expands to every permission.
@@ -148,7 +137,9 @@ pub fn audit(caller: &Caller, action: &str, project: Option<&str>, result: &str,
         .mode(0o600)
         .open(&path)
     {
+        // The audit trail must survive a power cut right after the action.
         let _ = f.write_all(format!("{rec}\n").as_bytes());
+        let _ = f.sync_data();
     }
 }
 

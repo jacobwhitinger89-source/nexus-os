@@ -17,3 +17,33 @@ First working system.
   forced command and project-scoped permissions, SSH key enrollment and
   finalize, firewall with SSH rate limiting.
 * Test suites: unit, host integration, QEMU boot and end-to-end install.
+
+### Fixed (since the first bootable image)
+* **Power-loss durability:** state on /data (SSH `authorized_keys`, project
+  policies, grants, deployment records, network/hostname/SSH config) is now
+  written with fsync + directory fsync (`nexus_core::fsutil`), and a
+  release's files are flushed before `current` switches to it. Before, a
+  power cut within ~30 s of a change could leave these files empty (seen as
+  an admin locked out and a project skipped after reset). The audit log is
+  synced per entry; the update kernel is synced before the trial boot is
+  scheduled.
+* **mDNS name conflicts:** mdnsd started before the interface had its
+  addresses, re-probed when they appeared, took its own announcement for
+  another host and renamed itself (`pixel-2.local`). It now starts once the
+  interface is addressed and is restarted cleanly when the IPv4 address
+  changes (DHCP hook, static configuration).
+* `nexus ssh finalize` and other intentional daemon restarts are no longer
+  delayed 10 s by the respawn throttle.
+* SSH rate limit raised to 60 new connections/minute (burst 40).
+* `mquery` included for mDNS diagnostics.
+
+### Tests
+* `make test-net`: two installed machines on one virtual link — unattended
+  install, static IPv4, persistence across reboot, mDNS discovery and
+  resolution, hostname change.
+* install-test: a broken update (valid checksums, unbootable image) falls
+  back to the good slot after three trial boots.
+* Restarting Dropbear (`nexus ssh finalize`, `allow-passwords`) could kill
+  the SSH session that requested it: sessions re-parented to init during
+  the /proc scan were signalled too. Dropbear now writes
+  `/run/nexus/dropbear.pid` and only that process is restarted.

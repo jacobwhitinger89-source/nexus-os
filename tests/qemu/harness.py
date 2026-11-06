@@ -26,7 +26,9 @@ def ovmf_args(vars_path):
     raise SystemExit("OVMF firmware not found")
 
 
-def base_args(mem=512, ssh_port=None, app_port=None):
+def base_args(mem=512, ssh_port=None, app_port=None, net=None):
+    """QEMU command line. `net` replaces the default user-mode NIC, e.g.
+    link_net(...) to wire two VMs together."""
     a = ["qemu-system-x86_64", "-machine", "q35", "-m", str(mem), "-smp", "2",
          "-display", "none", "-serial", "stdio",
          "-device", "i6300esb",
@@ -41,8 +43,20 @@ def base_args(mem=512, ssh_port=None, app_port=None):
         fwd += f",hostfwd=tcp:127.0.0.1:{ssh_port}-:22"
     if app_port:
         fwd += f",hostfwd=tcp:127.0.0.1:{app_port}-:8080"
+    if net is not None:
+        return a + net
     a += ["-netdev", f"user,id=n0{fwd}", "-device", "virtio-net-pci,netdev=n0"]
     return a
+
+
+def link_net(port, peer_port, mac):
+    """A NIC wired directly to one other VM (UDP datagrams on localhost: this
+    VM listens on `port`, the peer on `peer_port`). Unlike QEMU's multicast
+    hub this does not echo a VM's own frames back to it, which would make
+    mDNS see its own announcements as name conflicts."""
+    return ["-netdev", f"dgram,id=n0,local.type=inet,local.host=127.0.0.1,local.port={port},"
+            f"remote.type=inet,remote.host=127.0.0.1,remote.port={peer_port}",
+            "-device", f"virtio-net-pci,netdev=n0,mac={mac}"]
 
 
 class Vm:

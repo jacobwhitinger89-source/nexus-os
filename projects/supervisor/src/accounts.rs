@@ -6,7 +6,7 @@
 //! under an exclusive lock.
 
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Write};
+use std::io;
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
@@ -49,19 +49,7 @@ fn lock() -> io::Result<Lock> {
 fn replace(link: &Path, content: &str) -> io::Result<()> {
     let real = fs::canonicalize(link)?;
     let mode = fs::metadata(&real)?.permissions().mode() & 0o7777;
-    let tmp = real.with_extension("nexus-tmp");
-    {
-        let mut f = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .mode(mode)
-            .open(&tmp)?;
-        f.write_all(content.as_bytes())?;
-        f.sync_all()?;
-    }
-    fs::set_permissions(&tmp, fs::Permissions::from_mode(mode))?;
-    fs::rename(&tmp, &real)
+    nexus_core::fsutil::write_durable(&real, content.as_bytes(), mode)
 }
 
 fn used_ids(passwd: &str, group: &str) -> Vec<u32> {

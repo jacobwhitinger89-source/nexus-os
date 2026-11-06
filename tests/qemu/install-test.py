@@ -183,6 +183,7 @@ try:
     rc, out, err = ssh("nexus ssh finalize --json")
     res.check("key login + finalize", rc == 0 and '"password_auth": false' in out, out + err)
     time.sleep(2)
+    wait_ssh(30)
     rc, out, err = ssh("true", password=True)
     res.check("password logins now rejected", rc != 0, out + err)
 
@@ -296,6 +297,40 @@ try:
         res.check("trial boot of slot b confirmed", slot.get("booted_slot") == "b" and slot.get("good_slot") == "b"
                   and slot.get("pending_slot") == "", out + err)
         res.check("project survives system update", http("/")[0] == 200)
+
+        # A broken update (checksums valid, image garbage): every trial boot
+        # panics; after three attempts GRUB must return to the good slot.
+        bad = os.path.join(tmp, "bad")
+        os.makedirs(bad)
+        subprocess.run(["tar", "-xf", bundle, "-C", bad, "bzImage"], check=True)
+        with open(os.path.join(bad, "system.squashfs"), "wb") as f:
+            f.write(os.urandom(4 * 1024 * 1024))
+        with open(os.path.join(bad, "VERSION"), "w") as f:
+            f.write("broken-test\n")
+        sums = subprocess.run(["sha256sum", "system.squashfs", "bzImage", "VERSION"], cwd=bad,
+                              capture_output=True, text=True, check=True).stdout
+        with open(os.path.join(bad, "SHA256SUMS"), "w") as f:
+            f.write(sums)
+        bad_tar = subprocess.run(["tar", "-cf", "-", "-C", bad, "system.squashfs", "bzImage", "VERSION", "SHA256SUMS"],
+                                 capture_output=True, check=True).stdout
+        rc, out, err = ssh("cat > /data/home/admin/bad.tar", stdin=bad_tar)
+        rc, out, err = ssh(f"echo '{PASSWORD}' | sudo -S -p '' nexus system update /data/home/admin/bad.tar --json", timeout=300)
+        res.check("broken update written to slot a", rc == 0 and '"slot": "a"' in out, out + err)
+        ssh(f"echo '{PASSWORD}' | sudo -S -p '' nexus system reboot", timeout=30)
+        for attempt in range(3):
+            vm.expect(r"Kernel panic", 180)
+        vm.expect(r"login:", 240)
+        wait_ssh()
+        rc, out, err = ssh(f"echo '{PASSWORD}' | sudo -S -p '' nexus system slot --json")
+        try:
+            slot = json.loads(out)
+        except json.JSONDecodeError:
+            slot = {}
+        res.check("failed update falls back to the good slot after 3 attempts",
+                  slot.get("booted_slot") == "b" and slot.get("good_slot") == "b" and slot.get("pending_slot") == "",
+                  out + err)
+        ok = any(http("/")[0] == 200 or time.sleep(2) for _ in range(30))
+        res.check("project running after update fallback", ok)
     else:
         res.check("update bundle present", False, bundle)
 

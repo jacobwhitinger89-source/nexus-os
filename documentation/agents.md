@@ -26,6 +26,18 @@ ssh $H nexus history flight-efb --json
 ssh $H nexus rollback flight-efb --json
 ssh $H nexus restart flight-efb --service api-server --json
 ```
+Tip: reuse one SSH connection for many calls (the server rate-limits new
+connections to 60/minute per address):
+```
+# ~/.ssh/config on the agent's machine
+Host pixel-agent
+    HostName pixel.local
+    User agent-claude
+    ControlMaster auto
+    ControlPath ~/.ssh/cm-%r@%h:%p
+    ControlPersist 10m
+```
+
 Rules of thumb for agents:
 * Always pass `--json`; check the exit code (0 ok, 3 forbidden, 4 not found,
   5 supervisor unreachable, 1 failed).

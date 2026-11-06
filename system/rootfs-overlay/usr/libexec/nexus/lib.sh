@@ -90,3 +90,22 @@ nx_sysinfo() {
 	echo " Boot mode:  $(nx_mode) $(cat /run/nexus/slot 2>/dev/null)"
 	echo
 }
+
+# mDNS: mdnsd re-probes when its addresses change underneath it and can
+# then mistake its own earlier announcement for another host and rename
+# itself (pixel-2.local). So it starts only once the primary interface is
+# fully addressed, and is restarted cleanly when the IPv4 address changes.
+nx_ipv4() { ip -4 -o addr show dev "$1" 2>/dev/null | awk '{print $4; exit}'; }
+
+nx_net_ready() {
+	nr_if=$(cat /run/nexus/net-interface 2>/dev/null) || return 1
+	[ -n "$(nx_ipv4 "$nr_if")" ] && ! ip -6 addr show dev "$nr_if" 2>/dev/null | grep -q tentative
+}
+
+nx_mdns_refresh() {
+	mr_if=$(cat /run/nexus/net-interface 2>/dev/null) || return 0
+	[ "$(nx_ipv4 "$mr_if")" = "$(cat /run/nexus/mdnsd.addr 2>/dev/null)" ] && return 0
+	mr_pid=$(pidof mdnsd) || return 0
+	: > /run/nexus/svc-mdnsd.restart
+	kill $mr_pid
+}

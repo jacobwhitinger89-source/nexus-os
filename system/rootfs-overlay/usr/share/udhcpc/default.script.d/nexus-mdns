@@ -1,0 +1,5 @@
+#!/bin/sh
+# udhcpc hook: re-announce over mDNS when the lease brings a new address.
+case "$1" in
+bound|renew) . /usr/libexec/nexus/lib.sh; nx_mdns_refresh ;;
+esac

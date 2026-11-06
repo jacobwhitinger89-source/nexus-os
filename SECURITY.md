@@ -37,8 +37,8 @@ profile). Do not open public issues for unfixed vulnerabilities. NEXUS OS is
   always keeps working.
 * Root logins (`-w`) and remote port forwarding (`-k`) are disabled; at
   most 5 authentication attempts per connection (`-T 5`).
-* nftables limits new SSH connections to 12/minute per source address
-  (burst 6); excess attempts are dropped and logged (`nexus-fw
+* nftables limits new SSH connections to 60/minute per source address
+  (burst 40; generous enough for agent loops); excess attempts are dropped and logged (`nexus-fw
   ssh-ratelimit`). Dropbear logs failed logins to syslog; the dashboard's
   Security screen shows them.
 * Private keys are never transmitted: `nexus ssh add-key` and `nexus agent

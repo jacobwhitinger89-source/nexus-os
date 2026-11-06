@@ -21,8 +21,8 @@ table inet nexus {
 		udp dport 5353 accept comment "mDNS"
 		udp sport 67 udp dport 68 accept comment "DHCPv4"
 		udp sport 547 udp dport 546 accept comment "DHCPv6"
-		tcp dport 22 ct state new add @ssh_v4 { ip saddr limit rate over 12/minute burst 6 packets } log prefix "nexus-fw ssh-ratelimit " level warn drop
-		tcp dport 22 ct state new add @ssh_v6 { ip6 saddr limit rate over 12/minute burst 6 packets } log prefix "nexus-fw ssh-ratelimit " level warn drop
+		tcp dport 22 ct state new add @ssh_v4 { ip saddr limit rate over 60/minute burst 40 packets } log prefix "nexus-fw ssh-ratelimit " level warn drop
+		tcp dport 22 ct state new add @ssh_v6 { ip6 saddr limit rate over 60/minute burst 40 packets } log prefix "nexus-fw ssh-ratelimit " level warn drop
 		tcp dport 22 accept
 		tcp dport @public_tcp accept
 		udp dport @public_udp accept

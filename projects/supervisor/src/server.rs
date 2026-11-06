@@ -608,9 +608,7 @@ fn create_project(
             }
             fs::set_permissions(&dir, fs::Permissions::from_mode(mode))?;
         }
-        let pf = pp.policy();
-        fs::write(&pf, policy.to_toml())?;
-        fs::set_permissions(&pf, fs::Permissions::from_mode(0o600))?;
+        nexus_core::fsutil::write_durable(&pp.policy(), policy.to_toml().as_bytes(), 0o600)?;
         Ok(())
     };
     if let Err(e) = mk() {
@@ -678,10 +676,7 @@ fn update_policy(ctx: &Ctx, project: &str, f: impl FnOnce(&mut Policy)) -> Reply
     let mut policy = p.policy.clone();
     f(&mut policy);
     let path = ProjectPaths::new(project).policy();
-    let tmp = path.with_extension("tmp");
-    let w = fs::write(&tmp, policy.to_toml())
-        .and_then(|_| fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600)))
-        .and_then(|_| fs::rename(&tmp, &path));
+    let w = nexus_core::fsutil::write_durable(&path, policy.to_toml().as_bytes(), 0o600);
     match w {
         Ok(()) => {
             p.policy = policy;
@@ -897,7 +892,7 @@ fn agent_create(name: &str, key: &str) -> Reply {
             "command=\"/usr/bin/nexus agent-exec\",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty {} {}\n",
             parts[0], parts[1]
         );
-        fs::write(ssh.join("authorized_keys"), line)?;
+        nexus_core::fsutil::write_durable(&ssh.join("authorized_keys"), line.as_bytes(), 0o600)?;
         for (p, mode) in [
             (std::path::PathBuf::from(&home), 0o700),
             (ssh.clone(), 0o700),
@@ -972,9 +967,8 @@ fn set_password_auth(enabled: bool) -> Result<(), String> {
         "PASSWORD_AUTH={}",
         if enabled { "yes" } else { "no" }
     ));
-    let tmp = path.with_extension("tmp");
-    fs::write(&tmp, lines.join("\n") + "\n").map_err(|e| e.to_string())?;
-    fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
+    nexus_core::fsutil::write_durable(&path, (lines.join("\n") + "\n").as_bytes(), 0o644)
+        .map_err(|e| e.to_string())?;
     restart_sshd();
     Ok(())
 }
@@ -984,6 +978,24 @@ fn restart_sshd() {
     let Ok(rd) = fs::read_dir("/proc") else {
         return;
     };
+    // Intentional restart: skip svc's respawn throttle.
+    let _ = fs::write("/run/nexus/svc-dropbear.restart", "");
+    // Only the listening master is restarted; sessions keep running.
+    if let Some(pid) = fs::read_to_string("/run/nexus/dropbear.pid")
+        .ok()
+        .and_then(|s| s.trim().parse::<i32>().ok())
+        .filter(|pid| {
+            // A stale pidfile may name a reused pid.
+            fs::read_to_string(format!("/proc/{pid}/comm")).is_ok_and(|c| c.trim() == "dropbear")
+        })
+    {
+        unsafe { libc::kill(pid, libc::SIGTERM) };
+        return;
+    }
+    // Collect first, signal afterwards: once the master exits its session
+    // processes are re-parented to init and would match too (killing the
+    // very connection that asked for the restart).
+    let mut masters = Vec::new();
     for e in rd.flatten() {
         let Ok(pid) = e.file_name().to_string_lossy().parse::<i32>() else {
             continue;
@@ -998,8 +1010,11 @@ fn restart_sshd() {
             .find_map(|l| l.strip_prefix("PPid:"))
             .map(str::trim);
         if name == Some("dropbear") && ppid == Some("1") {
-            unsafe { libc::kill(pid, libc::SIGTERM) };
+            masters.push(pid);
         }
+    }
+    for pid in masters {
+        unsafe { libc::kill(pid, libc::SIGTERM) };
     }
 }
 

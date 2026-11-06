@@ -16,7 +16,11 @@ exec </dev/null >/dev/null 2>&1
 # (e.g. ntpd before DNS works) waits 10 s instead of looping in init.
 stamp=/run/nexus/svc-$name.started
 now=$(cut -d. -f1 /proc/uptime)
-if [ -f "$stamp" ] && [ $((now - $(cat "$stamp"))) -lt 10 ]; then
+# Intentional restarts (nexus ssh finalize, hostname change, ...) leave
+# /run/nexus/svc-<name>.restart and are not delayed.
+if [ -f "/run/nexus/svc-$name.restart" ]; then
+	rm -f "/run/nexus/svc-$name.restart"
+elif [ -f "$stamp" ] && [ $((now - $(cat "$stamp"))) -lt 10 ]; then
 	sleep 10
 	now=$(cut -d. -f1 /proc/uptime)
 fi
@@ -56,6 +60,8 @@ dropbear)
 	exec /usr/libexec/nexus/sshd ;;
 mdnsd)
 	installed_only
+	until nx_net_ready; do sleep 1; done
+	nx_ipv4 "$(cat /run/nexus/net-interface)" > /run/nexus/mdnsd.addr
 	exec mdnsd -n -s /etc/mdns.d ;;
 nexusd)
 	[ -x /usr/sbin/nexusd ] || park
