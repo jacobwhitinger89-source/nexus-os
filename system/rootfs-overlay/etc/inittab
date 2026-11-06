@@ -1,0 +1,23 @@
+# NEXUS OS inittab (BusyBox init).
+# Long-running system daemons are supervised here with "respawn" so a crash
+# is restarted by PID 1 itself. /usr/libexec/nexus/svc decides per boot mode
+# (live installer vs installed server) whether a daemon actually runs.
+::sysinit:/etc/init.d/rcS
+
+::respawn:/usr/libexec/nexus/svc syslogd
+::respawn:/usr/libexec/nexus/svc klogd
+::respawn:/usr/libexec/nexus/svc network
+::respawn:/usr/libexec/nexus/svc ntpd
+::respawn:/usr/libexec/nexus/svc acpid
+::respawn:/usr/libexec/nexus/svc watchdog
+::respawn:/usr/libexec/nexus/svc dropbear
+::respawn:/usr/libexec/nexus/svc mdnsd
+::respawn:/usr/libexec/nexus/svc nexusd
+::once:/usr/libexec/nexus/confirm-boot
+
+tty1::respawn:/usr/libexec/nexus/console tty1
+ttyS0::respawn:/usr/libexec/nexus/console ttyS0
+
+::ctrlaltdel:/sbin/reboot
+::shutdown:/etc/init.d/rcK
+::restart:/sbin/init

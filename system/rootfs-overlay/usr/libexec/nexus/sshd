@@ -1,0 +1,20 @@
+#!/bin/sh
+# Start dropbear in the foreground with NEXUS policy.
+#   /data/etc/nexus/ssh.conf:
+#     PASSWORD_AUTH=yes|no   (bootstrap enrollment vs key-only)
+#     PORT=22
+PASSWORD_AUTH=no
+PORT=22
+[ -f /data/etc/nexus/ssh.conf ] && . /data/etc/nexus/ssh.conf
+
+keydir=/data/etc/dropbear
+for t in ed25519 ecdsa; do
+	k=$keydir/dropbear_${t}_host_key
+	[ -s "$k" ] || dropbearkey -t $t -f "$k" >/dev/null 2>&1
+done
+
+set -- -F -p "$PORT" -w -k -T 5 \
+	-r $keydir/dropbear_ed25519_host_key -r $keydir/dropbear_ecdsa_host_key
+# -w: no root logins, -k: no remote port forwarding, -T: max auth tries.
+[ "$PASSWORD_AUTH" = yes ] || set -- "$@" -s
+exec dropbear "$@"

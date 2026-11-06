@@ -1,0 +1,57 @@
+#!/bin/sh
+# NEXUS network daemon: DHCP (default) or static configuration of the
+# primary wired interface. Runs in the foreground under init respawn.
+. /usr/libexec/nexus/lib.sh
+MODE=dhcp
+INTERFACE=auto
+ADDRESS=
+GATEWAY=
+DNS="1.1.1.1 9.9.9.9"
+[ -f /data/etc/nexus/network.conf ] && . /data/etc/nexus/network.conf
+# Our pid survives exec; "nexus system network" signals it to reconfigure.
+echo $$ > /run/nexus/netd.pid
+
+pick_interface() {
+	# Prefer an interface with carrier; fall back to the first wired one.
+	first=
+	for n in /sys/class/net/*; do
+		i=${n##*/}
+		[ "$i" = lo ] && continue
+		[ -d $n/wireless ] && continue
+		[ -e $n/device ] || continue
+		ip link set "$i" up 2>/dev/null
+		[ -n "$first" ] || first=$i
+	done
+	sleep 2
+	for n in /sys/class/net/*; do
+		i=${n##*/}
+		[ "$i" = lo ] && continue
+		[ "$(cat $n/carrier 2>/dev/null)" = 1 ] && { echo "$i"; return; }
+	done
+	echo "$first"
+}
+
+if [ "$INTERFACE" = auto ]; then
+	IF=
+	while [ -z "$IF" ]; do
+		IF=$(pick_interface)
+		[ -n "$IF" ] || sleep 5
+	done
+else
+	IF=$INTERFACE
+fi
+echo "$IF" > /run/nexus/net-interface
+ip link set "$IF" up
+
+if [ "$MODE" = static ]; then
+	ip addr flush dev "$IF"
+	ip addr add "$ADDRESS" dev "$IF"
+	[ -n "$GATEWAY" ] && ip route replace default via "$GATEWAY" dev "$IF"
+	: > /tmp/resolv.conf
+	for d in $DNS; do echo "nameserver $d" >> /tmp/resolv.conf; done
+	logger -t netd "static $ADDRESS on $IF"
+	exec sleep 2147483647
+fi
+
+exec udhcpc -f -S -i "$IF" -t 5 -T 3 -A 10 -x hostname:"$(hostname)" \
+	-s /usr/share/udhcpc/default.script

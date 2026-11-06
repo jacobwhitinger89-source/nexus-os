@@ -1,0 +1,24 @@
+#!/bin/sh
+# Minimal wget-compatible shim backed by curl, for hosts without wget.
+# Supports the subset Buildroot uses: -O FILE, -q, -t N, -T N, --passive-ftp, -nd.
+out=""; url=""; tries=3; timeout=30
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-O) out="$2"; shift ;;
+	-O*) out="${1#-O}" ;;
+	-t) tries="$2"; shift ;;
+	-T) timeout="$2"; shift ;;
+	-q|-nd|--passive-ftp|--no-verbose|-nv) ;;
+	--tries=*) tries="${1#*=}" ;;
+	--timeout=*) timeout="${1#*=}" ;;
+	--output-document=*) out="${1#*=}" ;;
+	-*) echo "wget-shim: ignoring option $1" >&2 ;;
+	*) url="$1" ;;
+	esac
+	shift
+done
+[ -n "$url" ] || { echo "wget-shim: no URL" >&2; exit 2; }
+if [ -n "$out" ] && [ "$out" != "-" ]; then
+	exec curl -fL --retry "$tries" --connect-timeout "$timeout" -o "$out" "$url"
+fi
+exec curl -fL --retry "$tries" --connect-timeout "$timeout" "$url"

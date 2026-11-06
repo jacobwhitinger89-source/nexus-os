@@ -1,0 +1,1 @@
+source "$BR2_EXTERNAL_NEXUS_PATH/package/nexus-tools/Config.in"

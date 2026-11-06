@@ -1,0 +1,19 @@
+#!/bin/sh
+# Confirm an A/B trial boot once the system has proven healthy: the
+# supervisor and SSH server must stay up for 90 seconds. Without this
+# confirmation GRUB falls back to the previous slot after 3 attempts.
+. /usr/libexec/nexus/lib.sh
+[ "$(nx_mode)" = installed ] || exit 0
+nx_cmdline nexus.trial >/dev/null || exit 0
+sleep 90
+for d in nexusd dropbear; do
+	if ! pidof $d >/dev/null; then
+		logger -t nexus-boot -p daemon.err "trial boot not confirmed: $d is not running"
+		exit 1
+	fi
+done
+if /usr/bin/nexus system confirm-boot >/dev/null 2>&1; then
+	logger -t nexus-boot "trial boot of slot $(cat /run/nexus/slot) confirmed"
+else
+	logger -t nexus-boot -p daemon.err "confirm-boot failed"
+fi

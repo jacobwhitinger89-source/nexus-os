@@ -1,0 +1,37 @@
+#!/bin/sh
+# NEXUS OS orderly shutdown (BusyBox init "shutdown" action).
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+. /usr/libexec/nexus/lib.sh
+
+echo
+echo "NEXUS OS is shutting down"
+
+stop() {
+	# stop NAME TIMEOUT: SIGTERM, wait up to TIMEOUT seconds, then SIGKILL.
+	pids=$(pidof "$1") || return 0
+	nx_step "Stopping $1"
+	kill -TERM $pids 2>/dev/null
+	t=0
+	while [ $t -lt $(($2 * 10)) ] && pidof "$1" >/dev/null; do
+		usleep 100000; t=$((t + 1))
+	done
+	pidof "$1" >/dev/null && kill -KILL $(pidof "$1") 2>/dev/null
+	nx_ok
+}
+
+# nexusd stops projects gracefully in dependency order before exiting.
+stop nexusd 45
+stop dropbear 5
+stop mdnsd 3
+stop udhcpc 3
+stop ntpd 3
+stop syslogd 3
+
+nx_step "Disabling swap"
+swapoff -a 2>/dev/null; nx_ok
+nx_step "Flushing disks"
+sync; nx_ok
+if mountpoint -q /data; then
+	nx_step "Remounting /data read-only"
+	if mount -o remount,ro /data 2>/dev/null; then nx_ok; else nx_fail "busy; journal will recover"; fi
+fi

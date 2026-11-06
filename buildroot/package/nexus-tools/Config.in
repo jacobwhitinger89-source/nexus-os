@@ -1,0 +1,7 @@
+config BR2_PACKAGE_NEXUS_TOOLS
+	bool "nexus-tools"
+	help
+	  NEXUS OS management components (nexus CLI and dashboard,
+	  nexusd supervisor, nexus-install installer). The binaries are
+	  statically linked Rust programs built by the top-level NEXUS
+	  Makefile (cargo, x86_64-unknown-linux-musl) into out/rust-bin.

@@ -1,0 +1,83 @@
+#!/bin/sh
+# NEXUS OS early system initialisation (runs once as BusyBox init "sysinit").
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+. /usr/libexec/nexus/lib.sh
+
+mount -t proc -o nosuid,nodev,noexec proc /proc
+mount -t sysfs -o nosuid,nodev,noexec sysfs /sys
+mountpoint -q /dev || mount -t devtmpfs -o nosuid,mode=0755 devtmpfs /dev
+mkdir -p /dev/pts /dev/shm
+mount -t devpts -o nosuid,noexec,gid=5,mode=620,ptmxmode=0666 devpts /dev/pts
+mount -t tmpfs -o nosuid,nodev,mode=1777 tmpfs /dev/shm
+mount -t tmpfs -o nosuid,nodev,mode=0755,size=16M tmpfs /run
+mount -t tmpfs -o nosuid,nodev,mode=1777 tmpfs /tmp
+mount -t cgroup2 -o nosuid,nodev,noexec,nsdelegate cgroup2 /sys/fs/cgroup 2>/dev/null
+[ -d /sys/firmware/efi/efivars ] && mount -t efivarfs -o nosuid,nodev,noexec efivarfs /sys/firmware/efi/efivars 2>/dev/null
+mkdir -p /run/nexus /run/lock
+
+nx_banner
+
+# Boot mode: "installed" (squashfs root slot + persistent data partition) or
+# "live" (installer ISO / development initramfs, everything in RAM).
+MODE=$(nx_cmdline nexus.mode)
+[ -n "$MODE" ] || MODE=live
+echo "$MODE" > /run/nexus/mode
+SLOT=$(nx_cmdline nexus.slot)
+[ -n "$SLOT" ] && echo "$SLOT" > /run/nexus/slot
+
+# Device nodes and hotplug (module autoloading, firmware).
+echo /sbin/mdev > /proc/sys/kernel/hotplug
+mdev -s
+
+nx_step "Mounting data storage"
+if [ "$MODE" = installed ]; then
+	DATADEV=$(blkid -L NEXUS_DATA 2>/dev/null)
+	if [ -z "$DATADEV" ]; then
+		nx_fail "data partition NEXUS_DATA not found — starting with volatile /data"
+		mount -t tmpfs -o mode=0755,size=64M tmpfs /data
+		echo degraded > /run/nexus/data-state
+	else
+		# Journal replay happens on mount; -p repairs only what is safe to
+		# repair automatically and leaves anything else for the console.
+		e2fsck -p "$DATADEV" >/run/nexus/fsck.log 2>&1
+		rc=$?
+		echo "$rc" > /run/nexus/fsck.rc
+		if [ $rc -ge 4 ]; then
+			nx_fail "filesystem check on $DATADEV needs manual repair (e2fsck exit $rc)"
+		fi
+		if mount -t ext4 -o nosuid,nodev,noatime,data=ordered,errors=remount-ro "$DATADEV" /data; then
+			echo ok > /run/nexus/data-state
+		else
+			nx_fail "cannot mount $DATADEV — starting with volatile /data"
+			mount -t tmpfs -o mode=0755,size=64M tmpfs /data
+			echo degraded > /run/nexus/data-state
+		fi
+	fi
+else
+	mount -t tmpfs -o mode=0755,size=64M tmpfs /data
+	echo volatile > /run/nexus/data-state
+fi
+nx_ok
+
+nx_prepare_data
+
+hostname -F /etc/hostname 2>/dev/null || hostname nexus
+ip link set lo up
+
+# Kernel hardening knobs that are policy rather than build configuration.
+sysctl -q -w kernel.kptr_restrict=2 kernel.yama.ptrace_scope=1 \
+	user.max_user_namespaces=0 net.ipv4.tcp_syncookies=1 \
+	fs.protected_symlinks=1 fs.protected_hardlinks=1 \
+	fs.protected_fifos=1 fs.protected_regular=2 \
+	kernel.panic=10 kernel.panic_on_oops=1 vm.panic_on_oom=0 2>/dev/null
+
+nx_zram_setup
+
+if [ "$MODE" = installed ]; then
+	nx_step "Applying firewall"
+	if nft -f /etc/nexus/firewall.nft 2>/run/nexus/firewall.err; then nx_ok; else nx_fail "see /run/nexus/firewall.err"; fi
+fi
+
+nx_sysinfo

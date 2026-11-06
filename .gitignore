@@ -1,0 +1,6 @@
+/target
+/build
+/dl
+/out
+/.tools
+*.qcow2

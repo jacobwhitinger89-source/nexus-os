@@ -1,0 +1,49 @@
+#!/bin/sh
+# Run one supervised system daemon in the foreground (called from inittab).
+# If the daemon does not apply to the current boot mode, park forever so
+# BusyBox init does not respawn-loop it.
+. /usr/libexec/nexus/lib.sh
+name=$1
+mode=$(nx_mode)
+
+park() { exec sleep 2147483647; }
+installed_only() { [ "$mode" = installed ] || park; }
+
+case "$name" in
+syslogd)
+	# 4 rotated files x 2 MiB keeps logs bounded on small disks.
+	exec syslogd -n -O /var/log/messages -s 2048 -b 4 ;;
+klogd)
+	exec klogd -n ;;
+network)
+	exec /usr/libexec/nexus/netd ;;
+ntpd)
+	NTP_SERVERS="pool.ntp.org"
+	[ -f /data/etc/nexus/ntp.conf ] && . /data/etc/nexus/ntp.conf
+	[ "$NTP_SERVERS" = none ] && park
+	set --
+	for s in $NTP_SERVERS; do set -- "$@" -p "$s"; done
+	exec ntpd -n "$@" ;;
+acpid)
+	# Power button => clean shutdown.
+	exec acpid -f -c /etc/acpi -M /etc/acpi.map -a /etc/acpid.conf ;;
+watchdog)
+	[ -c /dev/watchdog ] || park
+	WATCHDOG=yes
+	[ -f /data/etc/nexus/watchdog.conf ] && . /data/etc/nexus/watchdog.conf
+	[ "$WATCHDOG" = yes ] || park
+	# Kick every 10 s; the hardware resets the machine after 60 s of silence.
+	exec watchdog -F -t 10 -T 60 /dev/watchdog ;;
+dropbear)
+	installed_only
+	exec /usr/libexec/nexus/sshd ;;
+mdnsd)
+	installed_only
+	exec mdnsd -n -s /etc/mdns.d ;;
+nexusd)
+	[ -x /usr/sbin/nexusd ] || park
+	exec /usr/sbin/nexusd ;;
+*)
+	echo "svc: unknown service $name" >&2
+	park ;;
+esac

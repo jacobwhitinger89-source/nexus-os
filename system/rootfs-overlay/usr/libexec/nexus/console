@@ -1,0 +1,20 @@
+#!/bin/sh
+# Local console session for tty1 / ttyS0.
+#  live mode:      the NEXUS installer (falls back to a root shell)
+#  installed mode: a normal login prompt (local recovery access)
+. /usr/libexec/nexus/lib.sh
+tty=$1
+dev=/dev/$tty
+[ -c "$dev" ] && stty -F "$dev" >/dev/null 2>&1 || exec sleep 2147483647
+
+if [ "$(nx_mode)" = installed ]; then
+	case $tty in
+	ttyS*) exec getty -L 115200 "$tty" vt100 ;;
+	*) exec getty 38400 "$tty" linux ;;
+	esac
+fi
+
+if [ -x /usr/sbin/nexus-install ] && ! nx_cmdline nexus.shell >/dev/null; then
+	exec setsid -c /usr/sbin/nexus-install --console <"$dev" >"$dev" 2>&1
+fi
+exec setsid -c /bin/sh -l <"$dev" >"$dev" 2>&1

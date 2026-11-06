@@ -1,0 +1,4 @@
+# NEXUS administrators (members of wheel) may use sudo with their password.
+%wheel ALL=(ALL:ALL) ALL
+Defaults use_pty
+Defaults logfile=/var/log/sudo.log
