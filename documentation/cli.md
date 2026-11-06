@@ -25,4 +25,5 @@ accept `--json` (see [json-schema.md](json-schema.md)).
 | `nexus audit [--lines N]` | admin | audit trail |
 | `nexus whoami` | any | identity and grants |
 | `nexus ssh status\|add-key\|finalize\|allow-passwords` | — / own account / admin | SSH policy |
+| `nexus connect <host> [--user U] [--port N] [--alias A] [--key F.pub] [--fingerprint SHA256:…]` | runs on your computer | verify host key, enroll your public key, write `~/.ssh/config` alias ([connect.md](connect.md)) |
 | `nexus system hostname\|network\|update\|slot\|confirm-boot\|reboot\|poweroff` | root (sudo) | host configuration, A/B updates |

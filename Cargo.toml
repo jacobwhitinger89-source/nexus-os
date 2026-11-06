@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["management/core", "management/cli", "projects/supervisor", "installer", "examples/hello-http"]
+members = ["management/core", "management/cli", "management/connect", "projects/supervisor", "installer", "examples/hello-http"]
 
 [workspace.package]
 version = "0.1.0"

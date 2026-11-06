@@ -62,6 +62,12 @@ SSH
   ssh finalize                   disable password logins (after a key login)
   ssh allow-passwords            re-enable password logins (admin)
 
+On your own computer (Linux/macOS)
+  connect <host> [--user U] [--port N] [--alias A] [--key FILE.pub]
+          [--fingerprint SHA256:...]   verify host key, enroll your public
+                                 key, write an ~/.ssh/config alias
+                                 (nexus connect --help for details)
+
 System (root, e.g. via sudo)
   system hostname <name>
   system network dhcp | static --address A/P --gateway G [--dns 'D1 D2']
@@ -126,6 +132,10 @@ fn call_with(
 
 fn main() -> ExitCode {
     let raw: Vec<String> = std::env::args().skip(1).collect();
+    // Client-side command with its own options (runs on the workstation).
+    if raw.first().map(String::as_str) == Some("connect") {
+        return ExitCode::from(nexus_connect::main_with(&raw[1..]));
+    }
     let a = match Args::parse(raw) {
         Ok(a) => a,
         Err(e) => {
@@ -809,7 +819,7 @@ fn agent_exec() -> R {
     };
     if matches!(
         rest.first().map(String::as_str),
-        Some("agent-exec") | Some("dashboard") | Some("system")
+        Some("agent-exec") | Some("dashboard") | Some("system") | Some("connect")
     ) {
         return Err(Fail::Usage("command not available to agent keys".into()));
     }
@@ -818,4 +828,16 @@ fn agent_exec() -> R {
         .args(&rest)
         .exec();
     Err(Fail::Local(format!("exec failed: {err}")))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn connect_schema_version_matches() {
+        // nexus-connect duplicates the envelope to stay buildable on macOS.
+        assert_eq!(
+            nexus_connect::SCHEMA_VERSION,
+            nexus_core::schema::SCHEMA_VERSION
+        );
+    }
 }

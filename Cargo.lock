@@ -133,8 +133,18 @@ name = "nexus"
 version = "0.1.0"
 dependencies = [
  "libc",
+ "nexus-connect",
  "nexus-core",
  "serde_json",
+]
+
+[[package]]
+name = "nexus-connect"
+version = "0.1.0"
+dependencies = [
+ "base64ct",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]
