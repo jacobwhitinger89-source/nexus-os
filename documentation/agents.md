@@ -14,9 +14,24 @@ use `build` as well if the agent may run build commands on the server, and
 `config` for `nexus env`. Every action and every denial is audited
 (`nexus audit`).
 
-## 2. Agent workflow
+## 2. Connect the agent's machine (once)
+On the machine the agent runs on, pin the server's host key and write an SSH
+alias with connection sharing (see [connect.md](connect.md)); take the
+fingerprint from `nexus ssh status` on the server console:
 ```sh
-H=agent-claude@pixel.local
+nexus connect pixel.local --user agent-claude --alias pixel-agent \
+      --key ~/.ssh/agent_ed25519.pub --no-enroll \
+      --fingerprint SHA256:… --json
+```
+The alias block contains `ControlMaster auto`, `ControlPath ~/.ssh/nexus-%C`
+and `ControlPersist 10m`, so the many short `ssh … nexus … --json` calls an
+agent makes reuse one authenticated connection. With the alias, use
+`H=pixel-agent` below. (Human administrators run `nexus connect pixel.local`
+without `--no-enroll` to enroll their own key with their password.)
+
+## 3. Agent workflow
+```sh
+H=agent-claude@pixel.local     # or the alias written by nexus connect
 ssh $H nexus projects --json
 ssh $H nexus project status flight-efb --json     # status, failure, metrics
 ssh $H nexus doctor flight-efb --json             # structured diagnostics

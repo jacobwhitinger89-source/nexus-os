@@ -6,8 +6,9 @@
 * System tests run only in QEMU (`make test-boot`, `make test-install`).
   Never write to host block devices; never run the installer on the host.
 * Layout: `management/core` (shared lib: paths, schema, manifest, resources,
-  ipc, term), `management/cli` (nexus), `projects/supervisor` (nexusd),
-  `installer` (nexus-install), `system/rootfs-overlay` (init scripts),
+  ipc, term), `management/cli` (nexus), `management/connect` (client-side
+  `nexus connect`; no nexus-core dependency so it builds off-Linux),
+  `projects/supervisor` (nexusd), `installer` (nexus-install), `system/rootfs-overlay` (init scripts),
   `buildroot/` (external tree). After changing Rust code used in the image,
   `make build` re-packages it (`nexus-tools` package from `out/rust-bin`).
 * Invariants: root filesystem is read-only on installed systems (state goes

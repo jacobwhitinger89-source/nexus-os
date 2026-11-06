@@ -19,7 +19,7 @@ long-term research track).
 | E. Authentication & security | Dropbear (keys; password only for bootstrap), sudo for `wheel`, nexusd authorisation + audit | `usr/libexec/nexus/sshd`, `projects/supervisor/src/auth.rs` |
 | F. Storage | read-only squashfs system slots A/B + ext4 data partition | installer `install.rs`, `rcS` |
 | G. Process & service management | **nexusd** supervisor (cgroup v2, seccomp, namespaces) | `projects/supervisor/` |
-| H. Management interface | **nexus** CLI + dashboard | `management/cli/` |
+| H. Management interface | **nexus** CLI + dashboard; `nexus connect` client onboarding (runs on the user's computer) | `management/cli/`, `management/connect/` |
 | I. Deployment | nexusd deploy pipeline (upload → build → atomic switch → health → rollback) | `projects/supervisor/src/deploy.rs` |
 | J. Monitoring & diagnostics | `nexus-core::resources`, nexusd `diagnose.rs` | `management/core/`, `projects/supervisor/src/diagnose.rs` |
 

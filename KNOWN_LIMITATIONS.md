@@ -18,8 +18,14 @@ NEXUS OS is pre-alpha. This list is kept honest and current.
   installing on machines with 256 MiB works in principle but is untested.
 * Automatic fallback after a *failing* update is implemented (GRUB try
   counter) but only the successful update path is tested.
-* No `nexus connect` client yet; key enrollment uses standard `ssh-copy-id`
-  / `nexus ssh add-key`.
+* `nexus connect` is unit-tested only (fake `ssh`), not yet run against a
+  real server in the automated tests. It pins only the ed25519 host key,
+  does not detect *hashed* known_hosts entries (it may add a duplicate,
+  which OpenSSH tolerates), leaves stale entries for a reinstalled host in
+  place (reported; `ssh-keygen -R`), and appends its `Host` block at the end
+  of `~/.ssh/config`, so an earlier `Host *` with e.g. `User` wins. No
+  Windows support (use the manual steps in installation.md). It does not
+  discover servers by itself (no mDNS browsing): pass a name or IP.
 
 ## Security
 * ISO and update bundles are checksummed (SHA-256) but **not signed**.

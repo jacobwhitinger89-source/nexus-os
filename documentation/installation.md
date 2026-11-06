@@ -40,7 +40,14 @@ cannot change this setting from software.
 ## 3. First connection and key setup
 On your computer:
 
-* **Linux / macOS**
+* **Linux / macOS, with `nexus connect`** (does all of the steps below and
+  writes the `ssh pixel` alias; see [connect.md](connect.md))
+  ```sh
+  ssh-keygen -t ed25519          # only if you have no key yet
+  nexus connect pixel.local      # compare fingerprint with 'nexus ssh status' on the console
+  ssh pixel nexus ssh finalize
+  ```
+* **Linux / macOS, by hand**
   ```sh
   ssh admin@pixel.local          # compare the fingerprint shown with the installer's, type yes
   ssh-keygen -t ed25519          # only if you have no key yet (~/.ssh/id_ed25519.pub)

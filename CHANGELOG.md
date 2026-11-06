@@ -16,4 +16,9 @@ First working system.
 * nexus CLI with versioned JSON output, dashboard, agent accounts with
   forced command and project-scoped permissions, SSH key enrollment and
   finalize, firewall with SSH rate limiting.
+* `nexus connect` (also standalone `nexus-connect` with no Linux-only code, for macOS):
+  client-side onboarding — fetches the ed25519 host key, verifies its
+  SHA256 fingerprint (interactive or `--fingerprint`), pins it in
+  known_hosts, enrolls a public key via `nexus ssh add-key`, writes an
+  idempotent marked `~/.ssh/config` alias block with ControlMaster.
 * Test suites: unit, host integration, QEMU boot and end-to-end install.

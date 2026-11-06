@@ -6,7 +6,7 @@ _Last updated: 2026-11-06 — version 0.1.0-dev (pre-alpha)_
 
 | Suite | Command | Result |
 |---|---|---|
-| Rust unit tests | `make test-rust` | 28 passed (fmt + clippy `-D warnings` clean) |
+| Rust unit tests | `make test-rust` | 38 passed (fmt + clippy `-D warnings` clean) |
 | Host supervisor integration | `make test-host` | 23 / 23 |
 | QEMU boot (Phase 1 acceptance) | `make test-boot` | 12 / 12 |
 | QEMU install + end-to-end | `make test-install` | 48 / 48 |
@@ -36,7 +36,7 @@ environment + a running app fits in ~36 MiB (target 64–128 MiB).
 | 0 Architecture & environment | done | ARCHITECTURE.md, Makefile, setup script |
 | 1 First bootable image | **done** | boot-test (banner, hardware/memory info, console, clean shutdown) |
 | 2 Installation | **done** | install-test: wizard, validation, hidden password, disk confirmation, GPT A/B layout, GRUB UEFI+BIOS |
-| 3 Networking & SSH | mostly done | DHCP, Dropbear, host-key fingerprint, key enrollment, finalize, firewall rate limit (tested); **mDNS and static IP not yet verified in tests** |
+| 3 Networking & SSH | mostly done | DHCP, Dropbear, host-key fingerprint, key enrollment, finalize, firewall rate limit (tested); `nexus connect` client (unit tests only); **mDNS and static IP not yet verified in tests** |
 | 4 Management interface | done | `nexus status/resources/projects`, dashboard (manual check only, no automated TUI test) |
 | 5 Project management | done | supervision, restart policies, dependencies, health checks, cgroup limits, logs |
 | 6 AI integration | done | `--json` everywhere, diagnostics, agent accounts with forced command, grants, audit |
@@ -47,7 +47,10 @@ environment + a running app fits in ~36 MiB (target 64–128 MiB).
 ## Currently in progress / next objectives
 1. Test: failing A/B update falls back to the previous slot (kernel panic image).
 2. Test mDNS (`<host>.local`) with two VMs on a shared network; static IP test.
-3. `nexus connect` client utility (discover, verify, enroll key, write SSH alias).
+3. ~~`nexus connect` client utility~~ — implemented (`management/connect`,
+   unit-tested + smoke-tested with fake `ssh`/`ssh-keyscan`); **not yet
+   exercised against a real NEXUS server** (needs a QEMU test with
+   host-forwarded SSH).
 4. Signed update bundles / ISO (minisign or similar), then Secure Boot study.
 5. Physical hardware matrix (low-end laptops, mini PCs).
 6. Optional runtime packages (Node/Python) outside the base image.

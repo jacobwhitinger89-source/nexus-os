@@ -1,0 +1,12 @@
+[package]
+name = "nexus-connect"
+version = "0.1.0"
+edition = "2024"
+description = "Client-side onboarding for NEXUS OS servers (runs on Linux/macOS workstations)"
+
+# Deliberately independent of nexus-core (which has Linux-only parts) so the
+# standalone `nexus-connect` binary also builds on macOS.
+[dependencies]
+base64ct = { version = "1.8.3", features = ["alloc"] }
+serde_json = "1.0.154"
+sha2 = { version = "0.11.1", default-features = false }
