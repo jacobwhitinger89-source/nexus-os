@@ -44,7 +44,7 @@ environment + a running app fits in ~38 MiB (target 64–128 MiB).
 | 6 AI integration | done | `--json` everywhere, diagnostics, agent accounts with forced command, grants, audit |
 | 7 Deployment | done | upload/build/atomic switch/health/rollback (host + QEMU tests) |
 | 8 Reliability | mostly done | power-loss recovery (with durable state writes), A/B update + confirmation, automatic fallback after a failing update (3 panicking trial boots), clean shutdown (tested); watchdog hang recovery untested |
-| 9 Public release | in progress | publish script and CI ready (documentation/publishing.md); needs physical hardware testing, signed artifacts, first CI run on GitHub |
+| 9 Public release | in progress | published at github.com/jacobwhitinger89-source/nexus-os; full CI (image build + all QEMU suites) passes on GitHub's Ubuntu 24.04 runners in ~42 min; needs physical hardware testing, signed artifacts, a tagged release |
 
 ## Currently in progress / next objectives
 1. Stronger power-loss test: reset immediately after each kind of state change.
