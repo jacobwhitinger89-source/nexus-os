@@ -16,3 +16,6 @@
   privileged nexusd operation goes through `auth.rs` checks and the audit log;
   previous release is never deleted before the new one is healthy.
 * Keep DEVELOPMENT_STATUS.md, KNOWN_LIMITATIONS.md and CHANGELOG.md current.
+* Publishing to GitHub: `scripts/publish-github.sh` (see
+  documentation/publishing.md). Public and outward-facing: confirm with the
+  user before running it; never pass `--yes` on your own.

@@ -57,6 +57,10 @@ jobs:
         run: make test-boot
       - name: QEMU install / end-to-end test
         run: make test-install
+      - name: QEMU two-machine network test
+        run: make test-net
+      - name: QEMU USB stick install test (UEFI + BIOS)
+        run: make test-usb
       - name: Benchmarks
         run: make bench
       - uses: actions/upload-artifact@v4

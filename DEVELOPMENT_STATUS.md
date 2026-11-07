@@ -11,19 +11,20 @@ _Last updated: 2026-11-06 — version 0.1.0-dev (pre-alpha)_
 | QEMU boot (Phase 1 acceptance) | `make test-boot` | 12 / 12 |
 | QEMU install + end-to-end | `make test-install` | 53 / 53 |
 | QEMU two-machine networking | `make test-net` | 17 / 17 |
+| QEMU USB stick install, UEFI + BIOS | `make test-usb` | 8 / 8 |
 
 ## Measurements (`make bench`, QEMU/KVM — not physical hardware)
 
 | Metric | Value |
 |---|---|
-| Kernel (bzImage) | 11.5 MiB |
+| Kernel (bzImage) | 13.3 MiB (server NIC/RAID drivers built in) |
 | System image (squashfs, per slot) | 11.8 MiB |
-| Installer ISO | 47.7 MiB |
-| Boot to console, live image | 1.2 s |
+| Installer ISO | 51.5 MiB |
+| Boot to console, live image | 1.3 s |
 | Installed: firmware → login prompt (UEFI) | 5.2 s |
 | Installation (disk write, after wizard) | 1.9 s |
 | RAM used, installed, idle with SSH + nexusd + one app | **37.5 MiB** |
-| RAM used, live/installer (rootfs held in RAM) | 77.5 MiB (was 70.9; not yet investigated) |
+| RAM used, live/installer (rootfs held in RAM) | 82.4 MiB (was 77.5 before the server drivers; 70.9 earlier, not yet investigated) |
 | nexusd RSS | 1.1 MiB |
 | Each BusyBox daemon RSS | ~1.0–1.2 MiB |
 
@@ -43,7 +44,7 @@ environment + a running app fits in ~38 MiB (target 64–128 MiB).
 | 6 AI integration | done | `--json` everywhere, diagnostics, agent accounts with forced command, grants, audit |
 | 7 Deployment | done | upload/build/atomic switch/health/rollback (host + QEMU tests) |
 | 8 Reliability | mostly done | power-loss recovery (with durable state writes), A/B update + confirmation, automatic fallback after a failing update (3 panicking trial boots), clean shutdown (tested); watchdog hang recovery untested |
-| 9 Public release | not started | needs physical hardware testing, signed artifacts, CI run on GitHub, repository publication |
+| 9 Public release | in progress | publish script and CI ready (documentation/publishing.md); needs physical hardware testing, signed artifacts, first CI run on GitHub |
 
 ## Currently in progress / next objectives
 1. Stronger power-loss test: reset immediately after each kind of state change.

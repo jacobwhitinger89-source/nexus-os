@@ -22,6 +22,18 @@ First working system.
   known_hosts, enrolls a public key via `nexus ssh add-key`, writes an
   idempotent marked `~/.ssh/config` alias block with ControlMaster.
 * Test suites: unit, host integration, QEMU boot and end-to-end install.
+* Server hardware: built-in drivers for Intel 10/25/40/100G (ixgbe, i40e,
+  ice), Broadcom bnxt, Mellanox mlx5, Aquantia AQtion, vmxnet3 Ethernet and
+  MegaRAID, mpt3sas, hpsa, SmartPQI, PVSCSI storage controllers; Realtek
+  rtl_nic firmware (r8169/RTL8125, USB RTL8152/8153) included.
+* `make test-usb`: the ISO as a USB stick boots and installs under UEFI and
+  BIOS; the installed disk boots. Runs in CI with the network test.
+* Fixed: the installer could not find its media on a USB stick (only on a
+  CD): blkid's device scan skips whole disks that carry a partition table,
+  as a hybrid ISO written with `dd` does. Whole disks are now probed
+  directly, and the installer waits up to 30 s for a slow stick to appear.
+* `scripts/publish-github.sh` (documentation/publishing.md): checked,
+  confirmed publication to a public GitHub repository, optional release tag.
 
 ### Fixed (since the first bootable image)
 * **Power-loss durability:** state on /data (SSH `authorized_keys`, project

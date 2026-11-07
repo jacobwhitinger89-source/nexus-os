@@ -21,8 +21,12 @@ sha256sum -c SHA256SUMS --ignore-missing
 * Windows: use Rufus (DD mode) or balenaEtcher.
 
 ## 2. Install
-Boot from the stick (firmware boot menu: often F12, F11, F8 or Esc). Choose
-**Install NEXUS OS**. The wizard asks for:
+Boot from the stick (firmware boot menu: often F12, F11, F8 or Esc). Pick
+the stick in that one-time menu rather than relying on the boot order: many
+BIOSes try only the first hard disk in the order. In UEFI mode, **disable
+Secure Boot** first (not supported yet). Choose **Install NEXUS OS**. On a
+server with a hardware RAID card, create the RAID volume in the card's
+setup utility first; the installer shows it as one disk. The wizard asks for:
 
 1. welcome → 2. hardware check → 3. network detection → 4. hostname →
 5. administrator username → 6–7. password (hidden, entered twice) →

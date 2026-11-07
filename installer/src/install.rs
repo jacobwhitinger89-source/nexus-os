@@ -17,6 +17,7 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 const MEDIA_MNT: &str = "/run/nexus/media";
+const MEDIA_WAIT_SECS: u32 = 30;
 const ESP_MNT: &str = "/run/nexus/target-esp";
 const DATA_MNT: &str = "/run/nexus/target-data";
 const FACTORY: &str = "/usr/share/nexus/factory/etc";
@@ -98,16 +99,47 @@ fn mounted(target: &str) -> bool {
         .any(|l| l.split_whitespace().nth(1) == Some(target))
 }
 
-pub fn find_media() -> Result<Media, String> {
+fn media_device() -> Result<Option<String>, String> {
     let out = Command::new("blkid")
         .args(["-t", "LABEL=NEXUS_LIVE", "-o", "device"])
         .output()
         .map_err(|e| e.to_string())?;
-    let devs: Vec<String> = String::from_utf8_lossy(&out.stdout)
-        .lines()
-        .map(String::from)
+    if let Some(dev) = String::from_utf8_lossy(&out.stdout).lines().next() {
+        return Ok(Some(dev.to_string()));
+    }
+    // A USB stick holding the hybrid ISO has a partition table on the whole
+    // disk, and blkid's device scan skips such disks: probe each one directly.
+    let mut disks: Vec<String> = fs::read_dir("/sys/block")
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok()?.file_name().into_string().ok())
+        .filter(|n| !["loop", "ram", "zram"].iter().any(|p| n.starts_with(p)))
         .collect();
-    let Some(device) = devs.first().cloned() else {
+    disks.sort();
+    for name in disks {
+        let dev = format!("/dev/{name}");
+        let out = Command::new("blkid")
+            .args(["-o", "value", "-s", "LABEL", &dev])
+            .output()
+            .map_err(|e| e.to_string())?;
+        if String::from_utf8_lossy(&out.stdout).trim() == "NEXUS_LIVE" {
+            return Ok(Some(dev));
+        }
+    }
+    Ok(None)
+}
+
+pub fn find_media() -> Result<Media, String> {
+    // USB sticks appear several seconds after boot (bus enumeration and the
+    // usb-storage settle delay), often after the installer has started.
+    let mut device = media_device()?;
+    for _ in 0..MEDIA_WAIT_SECS {
+        if device.is_some() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        device = media_device()?;
+    }
+    let Some(device) = device else {
         return Err("installation media (label NEXUS_LIVE) not found — boot from the NEXUS ISO or USB stick".into());
     };
     fs::create_dir_all(MEDIA_MNT).map_err(|e| e.to_string())?;

@@ -263,6 +263,8 @@ fn interactive() -> Result<(), String> {
     // 2. Hardware check
     banner();
     say("HARDWARE CHECK\n");
+    // First, so a USB stick that is still appearing is in the disk list.
+    let media = install::find_media();
     let hw = disks::hardware();
     say(&format!(" CPU:       {} ({} cores)", hw.cpu, hw.cores));
     say(&format!(" Memory:    {} MiB", hw.mem_mib));
@@ -270,7 +272,6 @@ fn interactive() -> Result<(), String> {
         " Firmware:  {}",
         if hw.uefi { "UEFI" } else { "BIOS (legacy)" }
     ));
-    let media = install::find_media();
     let parent = media.as_ref().ok().and_then(|m| m.parent_disk.clone());
     let candidates = disks::eligible(parent.as_deref());
     say(&format!(

@@ -3,17 +3,19 @@
 NEXUS OS is pre-alpha. This list is kept honest and current.
 
 ## Hardware & boot
-* Tested only in QEMU (q35, KVM; OVMF UEFI and SeaBIOS). No physical
-  hardware test yet.
-* No Wi-Fi or Bluetooth. Wired Ethernet only, limited driver set
-  (documentation/hardware.md).
+* Tested only in QEMU (q35, KVM; OVMF UEFI and SeaBIOS, including booting
+  and installing from an emulated USB stick). No physical hardware test yet.
+* No Wi-Fi or Bluetooth. Wired Ethernet only (documentation/hardware.md).
+  Drivers are built into the kernel; there is no way yet to add a driver
+  for a network card that is not listed.
+* Intel E810 (ice) NICs run without the DDP package (basic mode).
 * Secure Boot is not supported.
 * Automatic power-on after AC loss is a firmware setting NEXUS cannot change.
 * x86-64 only.
 
 * mDNS and static IPv4 are tested between two VMs on a virtual link, not
   on a real LAN; IPv6 static configuration is not supported.
-* The installer/live system keeps its root filesystem in RAM (~71 MiB used);
+* The installer/live system keeps its root filesystem in RAM (~82 MiB used);
   installing on machines with 256 MiB works in principle but is untested.
 * Automatic fallback after a failing update is tested only for an update
   that panics at boot; an update that boots but never confirms itself
