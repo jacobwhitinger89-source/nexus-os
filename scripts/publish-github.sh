@@ -25,6 +25,8 @@ while [ $# -gt 0 ]; do
 done
 
 die() { echo "error: $*" >&2; exit 1; }
+# Push with gh's login, without needing a git credential helper set up.
+gpush() { git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push "$@"; }
 
 command -v gh >/dev/null || die "gh (GitHub CLI) is not installed"
 gh auth status >/dev/null 2>&1 || die "not logged in to GitHub: run 'gh auth login'"
@@ -43,9 +45,9 @@ $leaks"
 echo "    ok: $(git ls-files | wc -l) files, no build output, no keys"
 
 owner=$(gh api user --jq .login)
-email=$(git log -1 --format=%ae)
 echo "==> Target: github.com/$owner/$name ($visibility)"
-echo "    Commits will be public with author email: $email"
+echo "    Every name and email in the history becomes public:"
+git log --format='%an <%ae>%n%cn <%ce>' | sort -u | sed 's/^/      /'
 if [ -z "$yes" ]; then
 	printf 'Continue? [y/N] '
 	read -r ans
@@ -54,7 +56,7 @@ fi
 
 if git remote get-url origin >/dev/null 2>&1; then
 	echo "==> Pushing main to $(git remote get-url origin)"
-	git push origin main
+	gpush origin main
 else
 	echo "==> Creating github.com/$owner/$name"
 	gh repo create "$name" $visibility --source . --remote origin --push \
@@ -64,7 +66,7 @@ fi
 if [ -n "$tag" ]; then
 	echo "==> Tagging $tag (CI builds the ISO and drafts a release)"
 	git tag -a "$tag" -m "NEXUS OS $tag"
-	git push origin "$tag"
+	gpush origin "$tag"
 fi
 
 url=$(gh repo view --json url --jq .url)
