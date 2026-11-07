@@ -21,7 +21,7 @@ DISK=$WORK/disk.qcow2
 
 ovmf() {
 	for d in /usr/share/edk2/x64 /usr/share/OVMF /usr/share/ovmf/x64 /usr/share/edk2-ovmf/x64 /usr/share/qemu; do
-		for c in OVMF_CODE.4m.fd OVMF_CODE.fd; do
+		for c in OVMF_CODE.4m.fd OVMF_CODE_4M.fd OVMF_CODE.fd; do
 			if [ -f "$d/$c" ]; then
 				local vars=${c/CODE/VARS}
 				[ -f "$WORK/OVMF_VARS.fd" ] || cp "$d/$vars" "$WORK/OVMF_VARS.fd"

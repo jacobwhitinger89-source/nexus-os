@@ -16,7 +16,7 @@ os.makedirs(WORK, exist_ok=True)
 def ovmf_args(vars_path):
     for d in ["/usr/share/edk2/x64", "/usr/share/OVMF", "/usr/share/ovmf/x64",
               "/usr/share/edk2-ovmf/x64", "/usr/share/qemu"]:
-        for code in ["OVMF_CODE.4m.fd", "OVMF_CODE.fd"]:
+        for code in ["OVMF_CODE.4m.fd", "OVMF_CODE_4M.fd", "OVMF_CODE.fd"]:
             p = os.path.join(d, code)
             if os.path.exists(p):
                 if not os.path.exists(vars_path):
